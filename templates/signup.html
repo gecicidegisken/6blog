@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block title %} Üye Ol {%endblock%}
+{% block main %} 
+<form method="POST" action="/signup">
+    <table>
+        <tr>
+            <td><label for="username">Kullanıcı Adı</label></td>
+            <td><input type="text" name="username" required=""></br></td>
+        </tr>
+        <tr>
+            <td><label for="email">E-posta</label></td>
+            <td><input type="email" name="email" required=""></td>
+        </tr>
+        <tr>
+            <td><label for="password">Parola </label></td>
+            <td><input type="password" name="password" required=""></td>
+        </tr>
+      <tr>
+        <td><label >Üyelik tipi</label></td>
+        <td>
+          <input type="radio" name="usertype" value="writer" id="writertype">
+          <label for="writertype">Yazar</label>
+          <input type="radio" name="usertype" value="reader" id="readertype">
+          <label for="readertype">Okuyucu</label>
+        </td>
+      </tr>
+        <tr>
+            <td><button type="submit">Üye ol</button></td>
+        </tr>
+    </table>
+</form>
+{%endblock%} 
