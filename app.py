@@ -29,16 +29,15 @@ def index():
 @app.route('/signup',  methods=['GET', 'POST'])
 def signup():
     if request.method =='POST':
-         #üyeyi veritabanına kaydetme işlemleri
+         #add user to users collection in database
         username = request.form['username']
         password = request.form['password']
         email = request.form['email']
         usertype= request.form['usertype']
+
         user = User(username)
         user.createUser(username,email,password,usertype)
         db.users.insert_one({'username':username,'email':email,'password':password,'usertype':usertype})
-
-       
         return redirect(url_for('login'))
         
     return render_template('signup.html')
@@ -52,12 +51,19 @@ def login():
         password = request.form['password']
         usertype= "writer" #geçici
         #burada veritabanındaki kayıtlarla kontrol edeceğiz
-        if username=='hilal' and password =='123':
-          session['username']=username
-          session['usertype']=usertype
-          return redirect(url_for('index'))
+        if db.users.find_one({"username":username,"password":password}):
+            print("login succes")
+            session['username']=username
+            session['usertype']=usertype
+            return redirect(url_for('index')) 
+
+        # if username=='hilal' and password =='123':
+        #   session['username']=username
+        #   session['usertype']=usertype
+        #   return redirect(url_for('index'))
         else:
-          render_template('login.html')
+            print("login failed")
+            render_template('login.html')
     return render_template('login.html')
     
 
