@@ -1,9 +1,8 @@
 
-from cmath import log
-import re
+
 from flask import (Flask, render_template, request,redirect, url_for, session)
 app = Flask(__name__)
-app.secret_key = 'gizli_metin' #bunu buraya yazmak mantıklı mı?
+
 
 
 @app.route('/' ,methods=['GET', 'POST'])
