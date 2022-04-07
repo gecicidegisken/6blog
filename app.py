@@ -1,9 +1,26 @@
-
-
+import email
+from http import client
+from importlib.metadata import requires
 from flask import (Flask, render_template, request,redirect, url_for, session)
+from pymongo import MongoClient
 app = Flask(__name__)
+app.secret_key = 'kRzGGFpnat' #bunu buraya yazmanın mantığını anlamadım
+client = MongoClient('localhost',27017)
 
+db=client.blog_db
 
+class User():
+    username =""
+    password =""
+    usertype =""
+    email =""
+    def __init__(self,username):
+        self.username=username
+    def createUser(self,username,email,password,usertype):
+        username=username
+        email =email
+        password=password
+        usertype=usertype
 
 @app.route('/' ,methods=['GET', 'POST'])
 def index():
@@ -15,8 +32,13 @@ def signup():
          #üyeyi veritabanına kaydetme işlemleri
         username = request.form['username']
         password = request.form['password']
+        email = request.form['email']
         usertype= request.form['usertype']
-        
+        user = User(username)
+        user.createUser(username,email,password,usertype)
+        db.users.insert_one({'username':username,'email':email,'password':password,'usertype':usertype})
+
+       
         return redirect(url_for('login'))
         
     return render_template('signup.html')
@@ -56,6 +78,7 @@ def newpost():
         content = request.form['post-content']
         return redirect(url_for('index'))
     return render_template('newpost.html')
+
 
 
 
