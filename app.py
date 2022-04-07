@@ -1,6 +1,3 @@
-import email
-from http import client
-from importlib.metadata import requires
 from flask import (Flask, render_template, request,redirect, url_for, session)
 from pymongo import MongoClient
 app = Flask(__name__)
@@ -9,18 +6,30 @@ client = MongoClient('localhost',27017)
 
 db=client.blog_db
 
-class User():
-    username =""
-    password =""
-    usertype =""
-    email =""
-    def __init__(self,username):
-        self.username=username
-    def createUser(self,username,email,password,usertype):
-        username=username
-        email =email
-        password=password
-        usertype=usertype
+# class User():
+#     username =""
+#     password =""
+#     usertype =""
+#     email =""
+#     def __init__(self,username):
+#         self.username=username
+#     def createUser(self,username,email,password,usertype):
+#         username=username
+#         email =email
+#         password=password
+#         usertype=usertype
+
+
+
+# class Post():
+#     title=""
+#     content=""
+#     author=""
+    
+#     def createPost(self,title,content,author):
+#         title=title
+#         content=content
+#         author=author
 
 @app.route('/' ,methods=['GET', 'POST'])
 def index():
@@ -35,8 +44,7 @@ def signup():
         email = request.form['email']
         usertype= request.form['usertype']
 
-        user = User(username)
-        user.createUser(username,email,password,usertype)
+    
         db.users.insert_one({'username':username,'email':email,'password':password,'usertype':usertype})
         return redirect(url_for('login'))
         
@@ -82,6 +90,12 @@ def newpost():
     if request.method == 'POST':
         title= request.form['post-title']
         content = request.form['post-content']
+        # post=Post()
+        # post.createPost(title,content,session["username"])
+        db.posts.insert_one({"title":title,"content":content,"author":session["username"]})
+
+
+
         return redirect(url_for('index'))
     return render_template('newpost.html')
 
