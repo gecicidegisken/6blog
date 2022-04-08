@@ -1,3 +1,4 @@
+from enum import unique
 from flask import (Flask, render_template, request,redirect, url_for, session)
 from pymongo import MongoClient
 app = Flask(__name__)
@@ -6,34 +7,13 @@ client = MongoClient('localhost',27017)
 
 db=client.blog_db
 
-# class User():
-#     username =""
-#     password =""
-#     usertype =""
-#     email =""
-#     def __init__(self,username):
-#         self.username=username
-#     def createUser(self,username,email,password,usertype):
-#         username=username
-#         email =email
-#         password=password
-#         usertype=usertype
-
-
-
-# class Post():
-#     title=""
-#     content=""
-#     author=""
-    
-#     def createPost(self,title,content,author):
-#         title=title
-#         content=content
-#         author=author
+db.users.create_index("username",unique=True)
+db.users.create_index("email",unique=True)
 
 @app.route('/' ,methods=['GET', 'POST'])
 def index():
-    return render_template('index.html')
+    posts= db.posts.find()
+    return render_template('index.html',posts=posts)
 
 @app.route('/signup',  methods=['GET', 'POST'])
 def signup():
@@ -44,10 +24,11 @@ def signup():
         email = request.form['email']
         usertype= request.form['usertype']
 
-    
-        db.users.insert_one({'username':username,'email':email,'password':password,'usertype':usertype})
-        return redirect(url_for('login'))
-        
+        if not db.users.find_one({"username":username}) and not db.users.find_one({"email":email}):
+         db.users.insert_one({'username':username,'email':email,'password':password,'usertype':usertype})
+         print("signup success")
+         return redirect(url_for('login'))
+    print("signup fail")  
     return render_template('signup.html')
 
 @app.route('/login', methods=['GET', 'POST']) #buradaki formun login actionu
@@ -64,11 +45,6 @@ def login():
             session['username']=username
             session['usertype']=usertype
             return redirect(url_for('index')) 
-
-        # if username=='hilal' and password =='123':
-        #   session['username']=username
-        #   session['usertype']=usertype
-        #   return redirect(url_for('index'))
         else:
             print("login failed")
             render_template('login.html')
@@ -87,16 +63,15 @@ def logout():
 def newpost():
     if 'username' not in session:
         return redirect(url_for('login'))
+
     if request.method == 'POST':
         title= request.form['post-title']
         content = request.form['post-content']
         # post=Post()
         # post.createPost(title,content,session["username"])
         db.posts.insert_one({"title":title,"content":content,"author":session["username"]})
-
-
-
         return redirect(url_for('index'))
+
     return render_template('newpost.html')
 
 
@@ -106,4 +81,5 @@ if __name__ == "__main__":
     app.run(debug=True)
 
 
+#sudo systemctl start mongod
 # pipenv run python3 app.py

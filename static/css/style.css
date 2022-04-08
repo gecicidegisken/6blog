@@ -23,8 +23,9 @@ body,html {
   }
   a{
       text-decoration: none;
+      color: black;
   }
-  main div:not(:last-child){
+  main div{
       border-bottom: 2px solid black;
       padding-bottom: 5px;
   }

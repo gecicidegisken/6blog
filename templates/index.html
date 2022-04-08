@@ -2,7 +2,7 @@
 {% block title %} Ana Sayfa {% endblock %}
 {% block main %}
 <div>
-    <h2>Welcome to the jungle</h2>
+    <h2>I.R.S</h2>
     <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Perspiciatis nam, rerum odit magnam similique alias aliquid possimus corporis dolorem aliquam obcaecati cumque earum. Autem velit consequuntur debitis tempora, quisquam itaque.</p>
     <button>Up</button>
     <button>Down</button>
@@ -13,4 +13,16 @@
     <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Ipsum, earum provident odio praesentium repudiandae consequuntur quo voluptate voluptates modi! Molestias, dolore eaque. Laudantium amet mollitia repellat iusto sapiente, saepe tempora?</p>
     
 </div>
+<div>
+    <h2>Better</h2>
+    <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Ipsum, earum provident odio praesentium repudiandae consequuntur quo voluptate voluptates modi! Molestias, dolore eaque. Laudantium amet mollitia repellat iusto sapiente, saepe tempora?</p>
+    
+</div>
+
+{%for p in posts %}
+    <div>
+        <h2>{{p['title']}}</h2>
+        <p>{{p['content']}}</p>
+    </div>
+{%endfor%}
 {% endblock %}
