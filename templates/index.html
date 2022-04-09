@@ -6,11 +6,10 @@
     <div>
         <h2>{{p['title']}}</h2>
         <p>{{p['content']}}</p>
-        
+        {% if 'username' in session %}
         <a  href="/{{p['_id']}}/vote/1 " >Upvote</a>
         <a  href="/{{p['_id']}}/vote/0 " >Downvote</a>
-        <!-- <button value="1">Up</button>
-        <button value="-1">Down</button> -->
+        {%endif%}
         <p class="upvotes"> likes:{{p['likes']}}</p>
         <p class="downvotes">dislikes:{{p['dislikes']}}</p>
         

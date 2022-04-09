@@ -24,15 +24,15 @@ def vote(postid,votetype):
     dislikes = post['dislikes']
     likes = post['likes']
     where={"_id":ObjectId(postid)}
+    
     if votetype == '0':
         newValue={"$set":{"dislikes":dislikes+1}}
         db.posts.update_one(where,newValue)
-        print(db.posts.find_one({"_id":ObjectId(postid)},{"_id":1,"dislikes":1}))
+
     elif votetype =='1':
         newValue={"$set":{"likes":likes+1}}
         db.posts.update_one(where,newValue)
-        print(db.posts.find_one({"_id":ObjectId(postid)},{"_id":1,"likes":1}))
-        
+              
     return redirect(url_for('index'))
     
 
