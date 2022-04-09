@@ -4,8 +4,7 @@
 <div>
     <h2>I.R.S</h2>
     <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Perspiciatis nam, rerum odit magnam similique alias aliquid possimus corporis dolorem aliquam obcaecati cumque earum. Autem velit consequuntur debitis tempora, quisquam itaque.</p>
-    <button>Up</button>
-    <button>Down</button>
+
 </div>
 
 <div>
@@ -23,6 +22,15 @@
     <div>
         <h2>{{p['title']}}</h2>
         <p>{{p['content']}}</p>
+        
+        
+        <a  href="/{{p['_id']}}/vote/1 " >Upvote</a>
+        <a  href="/{{p['_id']}}/vote/0 " >Downvote</a>
+        <!-- <button value="1">Up</button>
+        <button value="-1">Down</button> -->
+        <p class="vote"></p>
+        
+    
     </div>
 {%endfor%}
 {% endblock %}
