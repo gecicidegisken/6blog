@@ -1,99 +1,55 @@
-from enum import unique
 from flask import (Flask, render_template, request,redirect, url_for, session)
 from pymongo import MongoClient
 from bson.objectid import ObjectId
+from flask_restful import reqparse, abort, Api, Resource
+
 app = Flask(__name__)
-app.secret_key = 'kRzGGFpnat' #bunu buraya yazmanın mantığını anlamadım
-client = MongoClient('localhost',27017)
+api = Api(app)
+parser = reqparse.RequestParser()
 
-db=client.blog_db
+entrys ={
+    '1':{'title':'I.R.S', 'content':'selam naber'},
+    '2':{'title':'Catcher In The Rye', 'content':'iyidir senden naber'}
+}
+users = {
+    'user1':{'username':'yazar','password':'123'},
+    'user2':{'username':'okuyucu','password':'123'}
+}
 
-db.users.create_index("username",unique=True)
-db.users.create_index("email",unique=True)
+class entry(Resource):
+    def get(self, entry_id):
+        return {'title':entrys[entry_id]['title'],'content':entrys[entry_id]['content']}
+    #    update
+    def put(self,entry_id):
+        
+        entrys[entry_id]['title']=request.form['e_title']
+        entrys[entry_id]['content']=request.form['e_content']
+        return {"title": entrys[entry_id]['title'],"content":entrys[entry_id]['content']}
 
-@app.route('/' ,methods=['GET', 'POST'])
-def index():
-    # db.posts.delete_many({})
-   
-    allPosts= db.posts.find()
-    return render_template('index.html',posts=allPosts)
+class EntryList(Resource):
+    def get(self):
+        return entrys
+    def post(self):
+        entrys['entry3']['title']=request.form['e_title']
+        entrys['entry3']['content']=request.form['e_content']
 
-@app.route('/<postid>/vote/<votetype>')
-def vote(postid,votetype):
-    post= db.posts.find_one({"_id": ObjectId(postid)})
-    dislikes = post['dislikes']
-    likes = post['likes']
-    where={"_id":ObjectId(postid)}
-    
-    if votetype == '0':
-        newValue={"$set":{"dislikes":dislikes+1}}
-        db.posts.update_one(where,newValue)
-
-    elif votetype =='1':
-        newValue={"$set":{"likes":likes+1}}
-        db.posts.update_one(where,newValue)
-              
-    return redirect(url_for('index'))
-    
-
-@app.route('/signup',  methods=['GET', 'POST'])
-def signup():
-    if request.method =='POST':
-         #add user to users collection in database
-        username = request.form['username']
-        password = request.form['password']
-        email = request.form['email']
-        usertype= request.form['usertype']
-
-        if not db.users.find_one({"username":username}) and not db.users.find_one({"email":email}):
-         db.users.insert_one({'username':username,'email':email,'password':password,'usertype':usertype})
-         print("signup success")
-         return redirect(url_for('login'))
-    print("signup fail")  
-    return render_template('signup.html')
-
-@app.route('/login', methods=['GET', 'POST']) #buradaki formun login actionu
-def login():
-    if 'username' in session:
-        return redirect(url_for('index')) #kullanıcı giris yapmışsa indexe yönlendir
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        user = db.users.find_one({"username":username,"password":password})
-        if user:
-            print("login succes")
-            session['username']=username
-            session['usertype']=user['usertype']
-            return redirect(url_for('index')) 
-        else:
-            print("login failed")
-            render_template('login.html')
-    return render_template('login.html')
-    
-
-@app.route('/logout')
-def logout():
-    if 'username' in session:
-        session.pop('username')
-        return redirect(url_for('index'))
-    else:
-        return redirect(url_for('login'))
-
-@app.route('/newpost', methods=['GET','POST']) 
-def newpost():
-    if 'username' not in session:
-        return redirect(url_for('login'))
-
-    if request.method == 'POST':
-        title= request.form['post-title']
-        content = request.form['post-content']
-        db.posts.insert_one({"title":title,"content":content,"author":session["username"], "likes":0, "dislikes":0})
-        return redirect(url_for('index'))
-
-    return render_template('newpost.html')
+class Users(Resource):
+    def get(self):
+        return users
+    def post(self):
+        """ create new user """
+        username= request.form['u_username']
+        password= request.form['u_password']
+        user_id = int(max(users.keys()).lstrip('user'))+1
+        user_id = 'user%i'%user_id
+        users[user_id] ={'username':username,'password':password}
 
 
+api.add_resource(EntryList,'/', '/<string:entry_id>')     
+api.add_resource(entry,
+                    '/<string:entry_id>')
 
+api.add_resource(Users,'/users')
 
 if __name__ == "__main__": 
     app.run(debug=True)
