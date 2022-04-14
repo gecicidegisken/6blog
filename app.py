@@ -3,11 +3,13 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 from flask_restful import reqparse, abort, Api, Resource
 
-app = Flask(__name__)
+app = Flask(__name__,instance_relative_config=True)
+# app.secret_key = 'kRzGGFpnat' 
+app.config.from_object('config')
+app.config.from_pyfile('config.py')
 api = Api(app)
-parser = reqparse.RequestParser()
-app.secret_key = 'kRzGGFpnat' #bunu buraya yazmanın mantığını anlamadım
-
+print(app.secret_key)
+#dummy data
 entrys ={
     'entry1':{'title':'I.R.S', 'content':'selam naber'},
     'entry2':{'title':'Catcher In The Rye', 'content':'iyidir senden naber'}
@@ -17,6 +19,7 @@ users = {
     'user2':{'username':'okuyucu','password':'123'}
 }
 
+#entry get, update actions
 class Entry(Resource):
     def get(self, entry_id):
         #get an entry
@@ -27,6 +30,7 @@ class Entry(Resource):
         entrys[entry_id]['content']=request.form['content']
         return {"title": entrys[entry_id]['title'],"content":entrys[entry_id]['content']}
 
+#entry list all, post new and delete actions
 class EntryList(Resource):
     def get(self):
         #get all entries
@@ -38,7 +42,11 @@ class EntryList(Resource):
         entry_id = int(max(entrys.keys()).lstrip('entry'))+1
         entry_id = 'entry%i'%entry_id
         entrys[entry_id]={'title':title,'content':content}
+    def delete(self,entry_id):
+        """delete entry"""
 
+
+#user create, delete and get actions
 class UserList(Resource):
     def get(self,user_id):
         #get a user
@@ -53,7 +61,6 @@ class UserList(Resource):
         users[user_id] ={'username':username,'password':password}
     def delete(self):
         """delete user"""
-
 #user login logout actions
 class User(Resource):
     def get(self):
@@ -75,9 +82,9 @@ class User(Resource):
          
 api.add_resource(EntryList,'/', '/entries', '/entries/new')     
 api.add_resource(Entry,'/entries/<string:entry_id>')
+
 api.add_resource(UserList,'/users/<string:user_id>')
 api.add_resource(User,'/login')
-# api.add_resource(UserLogout,'/logout')
 
 if __name__ == "__main__": 
     app.run(debug=True)
