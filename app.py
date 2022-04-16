@@ -1,12 +1,14 @@
+from sqlite3 import connect
 from flask import (Flask, request, session, url_for,redirect)
-from pymongo import MongoClient
-from bson.objectid import ObjectId
-from flask_restful import reqparse, abort, Api, Resource
+from mongoengine import *
+
+from flask_restful import Api, Resource
 
 app = Flask(__name__,instance_relative_config=True)
 app.config.from_object('config')
 app.config.from_pyfile('config.py')
 api = Api(app)
+connect('6blogdb')
 
 #dummy data
 entrys ={
@@ -14,8 +16,8 @@ entrys ={
     'entry2':{'title':'Catcher In The Rye', 'content':'iyidir senden naber', 'upvotes':0 ,'downvotes':0}
 }
 users = {
-    'user1':{'username':'yazar','password':'123'},
-    'user2':{'username':'okuyucu','password':'123'}
+    'user1':{'username':'yazar','password':'123', 'usertype':"writer"},
+    'user2':{'username':'okuyucu','password':'123','usertype':"reader"}
 }
 
 #entry get, vote actions
@@ -25,11 +27,15 @@ class Entry(Resource):
         return {'title':entrys[entry_id]['title'],'content':entrys[entry_id]['content']}
     def put(self,entry_id):    
         # vote an entry
-        vote = int(request.form['vote'])
-        if vote==1:
-            entrys[entry_id]['upvotes']+=1
-        elif vote==0:
-            entrys[entry_id]['downvotes']+=1
+        print(session)
+        if 'username' in session:
+            vote = int(request.form['vote'])
+            if vote==1:
+                entrys[entry_id]['upvotes']+=1
+            elif vote==0:
+                entrys[entry_id]['downvotes']+=1
+        else:
+            return("hata:oy kullanmak icin giris yapmalisiniz")
         return {"title": entrys[entry_id]['title'],"content":entrys[entry_id]['content'],"up":entrys[entry_id]['upvotes'], "down":entrys[entry_id]['downvotes']}
 
 #entry list all, post new and delete actions
@@ -56,13 +62,14 @@ class UserList(Resource):
 
     def post(self):
         #register new user
-        username= request.form['u_username']
-        password= request.form['u_password']
+        username= request.form['username']
+        password= request.form['password']
         user_id = int(max(users.keys()).lstrip('user'))+1
         user_id = 'user%i'%user_id
         users[user_id] ={'username':username,'password':password}
     def delete(self):
         """delete user"""
+
 #user login logout actions
 class User(Resource):
     def get(self):
