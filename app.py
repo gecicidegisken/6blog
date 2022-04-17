@@ -1,4 +1,4 @@
-from flask import (Flask, request, session, url_for,redirect)
+from flask import (Flask, request, session, jsonify)
 from mongoengine import *
 from flask_restful import Api, Resource
 
@@ -6,9 +6,11 @@ app = Flask(__name__,instance_relative_config=True)
 app.config.from_object('config')
 app.config.from_pyfile('config.py')
 api = Api(app)
-connect('6blogdb')
+db=connect('6blogdb')
 
 #database schemas
+
+# db.drop_database('6blogdb')
 
 class User(Document):
     username =StringField(required=True, unique=True)
@@ -18,17 +20,24 @@ class User(Document):
 class Entry(Document):
     title=StringField(required=True)
     content=StringField(required=True)
-    upvotes=IntField(required=True)
-    downvotes=IntField(required=True)
+    # votes= ListField(ReferenceField(Vote))
     author = ReferenceField(User,reverse_delete_rule=CASCADE) #delete all of their entries if a user is deleted
-    
+    date = DateTimeField() 
+
+class Vote(Document):
+    upordown =BooleanField() #1=up, 0 =down
+    voting_user = ReferenceField(User,reverse_delete_rule=CASCADE) #delete all of their votes if a user is deleted
+    entry = ReferenceField(Entry,reverse_delete_rule=CASCADE)
 
 # dummyuser1=User(username='yazar', password='123',usertype=1).save()
+# dummyuser2=User(username='hilal', password='123',usertype=1).save()
 # dummyuser2=User(username='okur', password='123',usertype=0).save()
+# dummyVote1=Vote(upordown=1,voting_user=dummyuser2).save()
+# dummyVote2=Vote(upordown=0,voting_user=dummyuser2).save()
+# dummyVote3=Vote(upordown=0,voting_user=dummyuser1).save()
 
-# dummypost1=Entry(title='Chinese Democracy', content='AAAAA', author=dummyuser1, downvotes=0, upvotes=0).save()
-# dummypost2=Entry(title='The Spaghetti Incident', content='BBBBB', author=dummyuser1, downvotes=0, upvotes=0).save()
-# dummypost3=Entry(title='The Spaghetti Incident', content='BBBBB', author=dummyuser1, downvotes=0, upvotes=0).save()
+# dummypost1=Entry(title='Chinese Democracy', content='AAAAA', author=dummyuser1 ).save()
+# dummypost2=Entry(title='The Spaghetti Incident', content='BBBBB', author=dummyuser1).save()
 
 #entry: get, vote actions
 class SingleEntry(Resource):
@@ -40,25 +49,30 @@ class SingleEntry(Resource):
     def put(self,entry_id):    
         #vote an entry
         if 'username' in session:
-            vote = int(request.form['vote'])
-            for e in Entry.objects(id=entry_id):
-                if vote==1:
-                    e.upvotes =e.upvotes+1
-                    e.save()
-                elif vote==0:
-                    e.downvotes =e.downvotes+1
-                    e.save()
-                return ({'downvotes':int(e.downvotes),'upvotes':int(e.upvotes)})
+            votetype = int(request.form['vote'])
+            current_user = User.objects.get(username = session['username'])
+            entry= User.objects.get(id=entry_id)
+            vote= Vote(upordown=votetype, voting_user=current_user, entry=entry).save()
+            if not Vote.objects(voting_user=vote.voting_user,entry=vote.entry):
+                print('oy kullanildi')
+                vote.save() 
+                return(vote.to_json())
+            else:
+                return({"hata":"zaten oy kullanilmis"})
         else:
-            return("hata:oy kullanmak icin giris yapmalisiniz")
+            return({"hata":"oy kullanmak icin giris yapmalisiniz"})
+      
+
+          
 
 #entry: list all, post new and delete actions
 class EntryList(Resource):
     def get(self):
         #get all entries (return düzenlenecek)
-        for e in Entry.objects:
-            print(e.title)
-        return ('No entry found')
+        entries = Entry.objects().order_by('date')
+        return entries.to_json()
+        # foovar.objects.all().values_list('id')
+    # return ('No entry found')
     def post(self):
         #new entry  
         title=request.form['title']
@@ -80,7 +94,7 @@ class EntryList(Resource):
 #user: register, delete and get actions
 class UserList(Resource):
     def get(self,user_id):
-        #get a user's informationee
+        #get a user's information
         for u in User.objects(id=user_id):
             return {'username':u.username, 'password':u.password,'usertype':u.usertype}
         return({"hata":"kullanici bulunamadi"})
@@ -95,6 +109,7 @@ class UserList(Resource):
                 return({"hata":"kullanici adi kullaniliyor"})
         newUser=User(username=username,password=password,usertype=usertype).save()
         return {'username':newUser.username, 'password':newUser.password,'usertype':newUser.usertype}
+
     def delete(self,user_id):
          #delete user
         for u in User.objects(id=user_id):
