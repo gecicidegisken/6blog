@@ -1,13 +1,14 @@
-from xmlrpc.client import Boolean, boolean
-from flask import Flask, request, session, jsonify
+from instance.config import Connection
+from flask import Flask, jsonify, request, session
+from flask_restful import Api, Resource, reqparse, inputs
 from mongoengine import *
-from flask_restful import Api, Resource, reqparse
 
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_object("config")
 app.config.from_pyfile("config.py")
+
 api = Api(app)
-db = connect("6blogdb")
+db = connect(host=Connection.DB_URI)
 parser = reqparse.RequestParser()
 
 
@@ -38,15 +39,6 @@ class Vote(Document):
     )  # delete all of their votes if a user is deleted
     entry = ReferenceField(Entry, reverse_delete_rule=CASCADE)
 
-
-# dummyuser1=User(username='yazar', password='123',usertype=1).save()
-# dummyuser2=User(username='hilal', password='123',usertype=1).save()
-# dummyuser2=User(username='okur', password='123',usertype=0).save()
-# dummyVote1=Vote(upordown=1,voting_user=dummyuser2).save()
-# dummyVote2=Vote(upordown=0,voting_user=dummyuser2).save()
-# dummyVote3=Vote(upordown=0,voting_user=dummyuser1).save()
-# dummypost1=Entry(title='Chinese Democracy', content='AAAAA', author=dummyuser1 ).save()
-# dummypost2=Entry(title='The Spaghetti Incident', content='BBBBB', author=dummyuser1).save()
 
 # helper functions
 def get_user_by_id(userid):
@@ -89,7 +81,7 @@ class SingleEntry(Resource):
     def put(self, entry_id):
         # vote an entry
         if "username" in session:
-            parser.add_argument("votetype", type=Boolean, required=True)
+            parser.add_argument("votetype", type=inputs.boolean, required=True)
             args = parser.parse_args()
             votetype = args["votetype"]
             current_user = get_user_by_username(session["username"])
@@ -163,7 +155,7 @@ class UserList(Resource):
         # register new user
         parser.add_argument("username", required=True)
         parser.add_argument("password", required=True)
-        parser.add_argument("usertype", type=Boolean, required=True)
+        parser.add_argument("usertype", type=inputs.boolean, required=True)
         args = parser.parse_args()
         username = args["username"]
         password = args["password"]
@@ -205,7 +197,7 @@ class SingleUser(Resource):
         password = args["password"]
         user = get_user_by_username(username)
 
-        if user.password == password:
+        if user != None and user.password == password:
             session["username"] = username
             print(session)
             return {"msg": "login success"}
