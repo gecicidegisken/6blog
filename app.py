@@ -1,12 +1,15 @@
+from xmlrpc.client import Boolean, boolean
 from flask import Flask, request, session, jsonify
 from mongoengine import *
-from flask_restful import Api, Resource
+from flask_restful import Api, Resource, reqparse
 
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_object("config")
 app.config.from_pyfile("config.py")
 api = Api(app)
 db = connect("6blogdb")
+parser = reqparse.RequestParser()
+
 
 # database schemas
 
@@ -22,7 +25,6 @@ class User(Document):
 class Entry(Document):
     title = StringField(required=True)
     content = StringField(required=True)
-    # votes= ListField(ReferenceField(Vote))
     author = ReferenceField(
         User, reverse_delete_rule=CASCADE
     )  # delete all of their entries if a user is deleted
@@ -30,7 +32,7 @@ class Entry(Document):
 
 
 class Vote(Document):
-    upordown = BooleanField()  # 1=up, 0 =down
+    upordown = BooleanField()  # 1=up, 0=down
     voting_user = ReferenceField(
         User, reverse_delete_rule=CASCADE
     )  # delete all of their votes if a user is deleted
@@ -47,28 +49,28 @@ class Vote(Document):
 # dummypost2=Entry(title='The Spaghetti Incident', content='BBBBB', author=dummyuser1).save()
 
 # helper functions
-def getUserbyId(userid):
+def get_user_by_id(userid):
     user = User.objects(id=userid).limit(1).first()
     if user != None:
         return user
     return
 
 
-def getUserByUsername(username):
+def get_user_by_username(username):
     user = User.objects(username=username).limit(1).first()
     if user != None:
         return user
     return
 
 
-def getEntryById(entryid):
+def get_entry_by_id(entryid):
     entry = Entry.objects(id=entryid).limit(1).first()
     if entry != None:
         return entry
     return
 
 
-def getEntriesByDate():
+def get_entries_orderby_date():
     entries = Entry.objects().order_by("date")
     return entries
 
@@ -77,18 +79,21 @@ def getEntriesByDate():
 class SingleEntry(Resource):
     def get(self, entry_id):
         # get an entry
-        entry = getEntryById(entry_id)
+        entry = get_entry_by_id(entry_id)
         if entry != None:
             return {"title": entry.title, "content": entry.content}
         else:
             return {"err": "not found"}, 404
 
+    # voting system needs updating
     def put(self, entry_id):
         # vote an entry
         if "username" in session:
-            votetype = int(request.form["vote"])
-            current_user = getUserByUsername(session["username"])
-            entry = getEntryById(entry_id)
+            parser.add_argument("votetype", type=Boolean, required=True)
+            args = parser.parse_args()
+            votetype = args["votetype"]
+            current_user = get_user_by_username(session["username"])
+            entry = get_entry_by_id(entry_id)
             vote = Vote(upordown=votetype, voting_user=current_user, entry=entry)
 
             if not Vote.objects(voting_user=vote.voting_user, entry=vote.entry):
@@ -105,27 +110,34 @@ class SingleEntry(Resource):
 # entry: list all, post new and delete actions
 class EntryList(Resource):
     def get(self):
-        # get all entries (return düzenlenecek)
-        entries = getEntriesByDate()
+        # get all entries
+        entries = get_entries_orderby_date()
         return entries.to_json()
 
     def post(self):
         # new entry
-        title = request.form["title"]
-        content = request.form["content"]
+        print(request.content_type)
+
+        parser.add_argument("title", required=True)
+        parser.add_argument("content", required=True)
+        args = parser.parse_args()
+        title = args["title"]
+        content = args["content"]
 
         if "username" in session:
-            author = getUserByUsername(session["username"])
+            author = get_user_by_username(session["username"])
             newEntry = Entry(
-                title=title, content=content, author=author, downvotes=0, upvotes=0
+                title=title,
+                content=content,
+                author=author,
             ).save()
-            return {"title": newEntry.title, "author": newEntry.author}
+            return {"title": newEntry.title, "author": newEntry.author.username}
         else:
             return {"err": "login to post a new entry"}, 401
 
     def delete(self, entry_id):
         # delete entry by id
-        entry = getEntryById(entry_id)
+        entry = get_entry_by_id(entry_id)
         if entry != None:
             entry.delete()
             return {"msg": "entry deleted"}
@@ -137,7 +149,7 @@ class EntryList(Resource):
 class UserList(Resource):
     def get(self, user_id):
         # get a user's information
-        user = getUserbyId(user_id)
+        user = get_user_by_id(user_id)
         if user != None:
             return {
                 "username": user.username,
@@ -149,10 +161,14 @@ class UserList(Resource):
 
     def post(self):
         # register new user
-        username = request.form["username"]
-        password = request.form["password"]
-        usertype = request.form["usertype"]
-        user = getUserByUsername(username)
+        parser.add_argument("username", required=True)
+        parser.add_argument("password", required=True)
+        parser.add_argument("usertype", type=Boolean, required=True)
+        args = parser.parse_args()
+        username = args["username"]
+        password = args["password"]
+        usertype = args["usertype"]
+        user = get_user_by_username(username)
 
         if user != None:
             return {"err": "username is used"}, 400
@@ -166,7 +182,7 @@ class UserList(Resource):
 
     def delete(self, user_id):
         # delete user
-        user = getUserbyId(user_id)
+        user = get_user_by_id(user_id)
 
         if user != None:
             user.delete()
@@ -182,9 +198,13 @@ class SingleUser(Resource):
 
     def post(self):
         # user login --credental check
-        username = request.form["username"]
-        password = request.form["password"]
-        user = getUserByUsername(username)
+        parser.add_argument("username", required=True)
+        parser.add_argument("password", required=True)
+        args = parser.parse_args()
+        username = args["username"]
+        password = args["password"]
+        user = get_user_by_username(username)
+
         if user.password == password:
             session["username"] = username
             print(session)
@@ -198,7 +218,7 @@ class SingleUser(Resource):
         return {"msg": "logout success"}
 
 
-api.add_resource(EntryList, "/", "/entries", "/entries/new")
+api.add_resource(EntryList, "/", "/entries")
 api.add_resource(SingleEntry, "/entries/<string:entry_id>")
 api.add_resource(UserList, "/users/<string:user_id>", "/users/register", "/users")
 api.add_resource(SingleUser, "/login")
