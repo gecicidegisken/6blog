@@ -1,17 +1,15 @@
-from instance.config import Connection, JWTKey
+from tabnanny import check
+from instance.config import Connection, JWTKey, PasswordSalt
 from flask import Flask, jsonify, request, session
 from flask_restful import Api, Resource, reqparse, inputs
-from mongoengine import *
 from flask_jwt_extended import (
     create_access_token,
-    get_jwt_identity,
     jwt_required,
     JWTManager,
     current_user,
-    get_jwt,
 )
-import json
-from bson import json_util
+from mongoengine import *
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_object("config")
@@ -182,11 +180,16 @@ class UserList(Resource):
         username = args["username"]
         password = args["password"]
         usertype = args["usertype"]
+        hashed_password = generate_password_hash(
+            password, method="pbkdf2:sha256", salt_length=8
+        )
         user = get_user_by_username(username)
 
         if user != None:
             return {"err": "username is used"}, 400
-        newUser = User(username=username, password=password, usertype=usertype).save()
+        newUser = User(
+            username=username, password=hashed_password, usertype=usertype
+        ).save()
 
         return {
             "username": newUser.username,
@@ -218,8 +221,10 @@ class SingleUser(Resource):
         username = args["username"]
         password = args["password"]
         user = get_user_by_username(username)
+        password_check = check_password_hash(user.password, password)
+        print(password_check)
 
-        if user != None and user.password == password:
+        if user != None and password_check:
             # session["username"] = username
             # print(session)
             # return {"msg": "login success"}
