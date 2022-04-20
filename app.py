@@ -1,20 +1,28 @@
-from instance.config import Connection
+from instance.config import Connection, JWTKey
 from flask import Flask, jsonify, request, session
 from flask_restful import Api, Resource, reqparse, inputs
 from mongoengine import *
+from flask_jwt_extended import (
+    create_access_token,
+    get_jwt_identity,
+    jwt_required,
+    JWTManager,
+    current_user,
+    get_jwt,
+)
+import json
+from bson import json_util
 
 app = Flask(__name__, instance_relative_config=True)
 app.config.from_object("config")
 app.config.from_pyfile("config.py")
-
+app.config["JWT_SECRET_KEY"] = JWTKey.JWT_KEY
 api = Api(app)
 db = connect(host=Connection.DB_URI)
 parser = reqparse.RequestParser()
-
+jwt = JWTManager(app)
 
 # database schemas
-
-# db.drop_database('6blogdb')
 
 
 class User(Document):
@@ -67,6 +75,20 @@ def get_entries_orderby_date():
     return entries
 
 
+# JWT oluştururken identity=user yazdığımızda bu user objectinin id değerini doğru formatta getiren
+# callback fonksiyonu
+@jwt.user_identity_loader
+def get_id_by_user(user):
+    return str(user.id)
+
+
+# current_user da buradan geliyor
+@jwt.user_lookup_loader
+def user_lookup_callback(_jwt_header, jwt_data):
+    identity = jwt_data["sub"]
+    return User.objects(id=identity).limit(1).first()
+
+
 # entry: get, vote actions
 class SingleEntry(Resource):
     def get(self, entry_id):
@@ -106,18 +128,18 @@ class EntryList(Resource):
         entries = get_entries_orderby_date()
         return entries.to_json()
 
+    @jwt_required()
     def post(self):
         # new entry
-        print(request.content_type)
-
+        # print(current_user.username)
         parser.add_argument("title", required=True)
         parser.add_argument("content", required=True)
         args = parser.parse_args()
         title = args["title"]
         content = args["content"]
 
-        if "username" in session:
-            author = get_user_by_username(session["username"])
+        if current_user != None:
+            author = get_user_by_id(current_user.id)
             newEntry = Entry(
                 title=title,
                 content=content,
@@ -198,9 +220,14 @@ class SingleUser(Resource):
         user = get_user_by_username(username)
 
         if user != None and user.password == password:
-            session["username"] = username
-            print(session)
-            return {"msg": "login success"}
+            # session["username"] = username
+            # print(session)
+            # return {"msg": "login success"}
+            access_token = create_access_token(identity=user)
+            print(get_id_by_user(user))
+            print(user.id)
+            return jsonify(access_token=access_token)
+
         return {"err": "login fail"}, 400
 
     def delete(self):
