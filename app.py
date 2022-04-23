@@ -1,17 +1,21 @@
-from tabnanny import check
-from instance.config import Connection, JWTKey, PasswordSalt
+from importlib.metadata import requires
+from xml.dom.minidom import Document
+from instance.config import Connection, JWTKey
+from datetime import date, timedelta
 from flask import Flask, jsonify, request, session
 from flask_restful import Api, Resource, reqparse, inputs
+from mongoengine import *
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import (
     create_access_token,
     jwt_required,
     JWTManager,
     current_user,
+    get_jwt,
 )
-from mongoengine import *
-from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__, instance_relative_config=True)
+JWT_TTL = timedelta(hours=2)
 app.config.from_object("config")
 app.config.from_pyfile("config.py")
 app.config["JWT_SECRET_KEY"] = JWTKey.JWT_KEY
@@ -21,29 +25,27 @@ parser = reqparse.RequestParser()
 jwt = JWTManager(app)
 
 # database schemas
-
-
 class User(Document):
     username = StringField(required=True, unique=True)
-    password = StringField(required=True)  # bunun tipi değişebilir
+    password = StringField(required=True)
     usertype = BooleanField(required=True)  # 1 = writer , 0 = reader
 
 
 class Entry(Document):
     title = StringField(required=True)
     content = StringField(required=True)
-    author = ReferenceField(
-        User, reverse_delete_rule=CASCADE
-    )  # delete all of their entries if a user is deleted
-    date = DateTimeField()
+    author = ReferenceField(User, reverse_delete_rule=CASCADE)
+    date = DateTimeField(required=True)
 
 
 class Vote(Document):
-    upordown = BooleanField()  # 1=up, 0=down
-    voting_user = ReferenceField(
-        User, reverse_delete_rule=CASCADE
-    )  # delete all of their votes if a user is deleted
+    upordown = BooleanField()  # 1 = up, 0 = down
+    voting_user = ReferenceField(User, reverse_delete_rule=CASCADE)
     entry = ReferenceField(Entry, reverse_delete_rule=CASCADE)
+
+
+class TokenBlockList(Document):
+    jti = StringField(required=True)
 
 
 # helper functions
@@ -73,6 +75,10 @@ def get_entries_orderby_date():
     return entries
 
 
+def check_user_password():
+    """"""
+
+
 # JWT oluştururken identity=user yazdığımızda bu user objectinin id değerini doğru formatta getiren
 # callback fonksiyonu
 @jwt.user_identity_loader
@@ -87,24 +93,45 @@ def user_lookup_callback(_jwt_header, jwt_data):
     return User.objects(id=identity).limit(1).first()
 
 
+@jwt.token_in_blocklist_loader
+def check_if_token_revoked(jwt_header, jwt_payload):
+    jti = jwt_payload["jti"]
+    token = TokenBlockList.objects(jti=jti).limit(1).first()
+    return token != None
+
+
 # entry: get, vote actions
 class SingleEntry(Resource):
     def get(self, entry_id):
-        # get an entry
+        """Get an entry by entry_id
+
+        Return entry information (title,content,author username,date) based on ID,
+        Return 404 not found if entry does not exist
+        """
         entry = get_entry_by_id(entry_id)
         if entry != None:
-            return {"title": entry.title, "content": entry.content}
+            return {
+                "title": entry.title,
+                "content": entry.content,
+                "author": entry.author.username,
+                "date": entry.date,
+            }
         else:
             return {"err": "not found"}, 404
 
     # voting system needs updating
     def put(self, entry_id):
-        # vote an entry
-        if "username" in session:
+        """Vote an entry by entry_id
+
+        Return vote if user is logged in and never voted to this entry before
+        Return 403 if user voted this entry before
+        Return 401 if user is not logged in
+        """
+        current_user = get_user_by_username(session["username"])
+        if current_user != None:
             parser.add_argument("votetype", type=inputs.boolean, required=True)
             args = parser.parse_args()
             votetype = args["votetype"]
-            current_user = get_user_by_username(session["username"])
             entry = get_entry_by_id(entry_id)
             vote = Vote(upordown=votetype, voting_user=current_user, entry=entry)
 
@@ -122,13 +149,21 @@ class SingleEntry(Resource):
 # entry: list all, post new and delete actions
 class EntryList(Resource):
     def get(self):
-        # get all entries
+        """Get all entries ordered by date
+
+        Return entries in json format
+        """
         entries = get_entries_orderby_date()
         return entries.to_json()
 
     @jwt_required()
     def post(self):
-        # new entry
+        """Add new entry
+
+        Arguments: entry title as 'title', entry content as 'content' (all str)
+        Return the info of new entry (title, content, author, date) if user is logged in
+        Return 401 if user is not logged in
+        """
         # print(current_user.username)
         parser.add_argument("title", required=True)
         parser.add_argument("content", required=True)
@@ -139,16 +174,23 @@ class EntryList(Resource):
         if current_user != None:
             author = get_user_by_id(current_user.id)
             newEntry = Entry(
-                title=title,
-                content=content,
-                author=author,
+                title=title, content=content, author=author, date=date.today()
             ).save()
-            return {"title": newEntry.title, "author": newEntry.author.username}
+            return {
+                "title": newEntry.title,
+                "content": newEntry.content,
+                "author": newEntry.author.username,
+                "date": newEntry.date,
+            }
         else:
             return {"err": "login to post a new entry"}, 401
 
     def delete(self, entry_id):
-        # delete entry by id
+        """Delete an entry by entry_id
+
+        Return 200 if entry successfully deleted
+        Return 400 if entry doesn't exist
+        """
         entry = get_entry_by_id(entry_id)
         if entry != None:
             entry.delete()
@@ -160,7 +202,11 @@ class EntryList(Resource):
 # user: register, delete and get actions
 class UserList(Resource):
     def get(self, user_id):
-        # get a user's information
+        """Get user info by user_id
+
+        Return username, password, usertype if user exists
+        Return 404 if user doesn't exist
+        """
         user = get_user_by_id(user_id)
         if user != None:
             return {
@@ -172,7 +218,12 @@ class UserList(Resource):
             return {"err": "user not found"}, 404
 
     def post(self):
-        # register new user
+        """Register a new user
+
+        Arguments: username(str), password(str), usertype (boolean)
+        Return new user's info if succeed
+        Return 400 if username is used
+        """
         parser.add_argument("username", required=True)
         parser.add_argument("password", required=True)
         parser.add_argument("usertype", type=inputs.boolean, required=True)
@@ -198,23 +249,32 @@ class UserList(Resource):
         }
 
     def delete(self, user_id):
-        # delete user
+        """Delete a user by user_id
+
+        Return 200 if succeed
+        Return 404 if user doesn't exist
+        """
         user = get_user_by_id(user_id)
 
         if user != None:
             user.delete()
             return {"msg": "user deleted"}
-        return {"err": "user does not exist"}
+        return {"err": "user does not exist"}, 404
 
 
 # user: login and logout actions
 class SingleUser(Resource):
     def get(self):
-        # get the page with login form
-        return ()
+        """Get the page with login form"""
+        return
 
     def post(self):
-        # user login --credental check
+        """Credental check for user login
+
+        Arguments: username, password (all str)
+        Return access token if succeed
+        Return 400 if login fails
+        """
         parser.add_argument("username", required=True)
         parser.add_argument("password", required=True)
         args = parser.parse_args()
@@ -225,9 +285,6 @@ class SingleUser(Resource):
         print(password_check)
 
         if user != None and password_check:
-            # session["username"] = username
-            # print(session)
-            # return {"msg": "login success"}
             access_token = create_access_token(identity=user)
             print(get_id_by_user(user))
             print(user.id)
@@ -235,10 +292,12 @@ class SingleUser(Resource):
 
         return {"err": "login fail"}, 400
 
+    @jwt_required()
     def delete(self):
-        # user logout
-        session.pop("username", None)
-        print(session)
+        # burada token revoke edilecek
+        jti = get_jwt()["jti"]
+        blockedToken = TokenBlockList(jti=jti)
+        blockedToken.save()
         return {"msg": "logout success"}
 
 
