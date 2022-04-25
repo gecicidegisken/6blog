@@ -1,10 +1,9 @@
-from importlib.metadata import requires
-from xml.dom.minidom import Document
 from instance.config import Connection, JWTKey
 from datetime import date, timedelta
 from flask import Flask, jsonify, request, session
 from flask_restful import Api, Resource, reqparse, inputs
 from mongoengine import *
+from flasgger import Swagger
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import (
     create_access_token,
@@ -23,7 +22,7 @@ api = Api(app)
 db = connect(host=Connection.DB_URI)
 parser = reqparse.RequestParser()
 jwt = JWTManager(app)
-
+swagger = Swagger(app)
 # database schemas
 class User(Document):
     username = StringField(required=True, unique=True)
@@ -107,6 +106,18 @@ class SingleEntry(Resource):
 
         Return entry information (title,content,author username,date) based on ID,
         Return 404 not found if entry does not exist
+        ---
+        parameters:
+            - in: path
+              name: entry_id
+              required: true
+              description: the ID of the entry from db
+              type: string
+        responses:
+            200:
+                description: the entry data
+            404:
+                description: entry not found
         """
         entry = get_entry_by_id(entry_id)
         if entry != None:
@@ -119,13 +130,23 @@ class SingleEntry(Resource):
         else:
             return {"err": "not found"}, 404
 
-    # voting system needs updating
     def put(self, entry_id):
         """Vote an entry by entry_id
+        ---
+        parameters:
+            - in: path
+              name: entry_id
+              required: true
+              description: the ID of the entry from db
+              type: string
+        responses:
+            200:
+                description: Vote info
+            401:
+                description: Login to vote
+            403:
+                description: Current user already voted this content
 
-        Return vote if user is logged in and never voted to this entry before
-        Return 403 if user voted this entry before
-        Return 401 if user is not logged in
         """
         current_user = get_user_by_username(session["username"])
         if current_user != None:
@@ -150,8 +171,10 @@ class SingleEntry(Resource):
 class EntryList(Resource):
     def get(self):
         """Get all entries ordered by date
-
-        Return entries in json format
+        ---
+        responses:
+            200:
+                description: all entries ordered by date in json format
         """
         entries = get_entries_orderby_date()
         return entries.to_json()
@@ -159,10 +182,25 @@ class EntryList(Resource):
     @jwt_required()
     def post(self):
         """Add new entry
+        ---
+        parameters:
+            - in: body
+              name: title
+              required: true
+              description: the title of the new entry
+              type: string
 
-        Arguments: entry title as 'title', entry content as 'content' (all str)
-        Return the info of new entry (title, content, author, date) if user is logged in
-        Return 401 if user is not logged in
+            - in: body
+              name: content
+              required: true
+              description: the content of the new entry
+              type: string
+        responses:
+            200:
+                description: info of the new entry
+            401:
+                description: login to post a new entry
+
         """
         # print(current_user.username)
         parser.add_argument("title", required=True)
@@ -187,9 +225,19 @@ class EntryList(Resource):
 
     def delete(self, entry_id):
         """Delete an entry by entry_id
+        ---
+        parameters:
+            - in: path
+              name: entry_id
+              required: true
+              description: the id of the entry to be deleted
+              type: string
+        responses:
+            200:
+                description: entry deleted
+            400:
+                description: entry not found
 
-        Return 200 if entry successfully deleted
-        Return 400 if entry doesn't exist
         """
         entry = get_entry_by_id(entry_id)
         if entry != None:
@@ -203,9 +251,19 @@ class EntryList(Resource):
 class UserList(Resource):
     def get(self, user_id):
         """Get user info by user_id
+        ---
+        parameters:
+            - in : path
+              name: user_id
+              required: true
+              description: the id of the user
+              type: string
 
-        Return username, password, usertype if user exists
-        Return 404 if user doesn't exist
+        responses:
+            200:
+                description: user info
+            404:
+                description: user not found
         """
         user = get_user_by_id(user_id)
         if user != None:
@@ -219,10 +277,28 @@ class UserList(Resource):
 
     def post(self):
         """Register a new user
-
-        Arguments: username(str), password(str), usertype (boolean)
-        Return new user's info if succeed
-        Return 400 if username is used
+        ---
+        parameters:
+            - in: body
+              name: username
+              description: username of the user
+              required: true
+              type: string
+            - in: body
+              name: password
+              description: password of the user
+              required: true
+              type: string
+            - in: body
+              name: usertype
+              description: user type ( writer or reader )
+              required: true
+              type: boolean
+        responses:
+            200:
+                description: new user's info
+            400:
+                description: username is used
         """
         parser.add_argument("username", required=True)
         parser.add_argument("password", required=True)
@@ -251,8 +327,19 @@ class UserList(Resource):
     def delete(self, user_id):
         """Delete a user by user_id
 
-        Return 200 if succeed
-        Return 404 if user doesn't exist
+        ---
+        parameters:
+            - in: path
+              name: user_id
+              description: id of the user to be deleted
+              type: string
+              required: true
+
+        responses:
+            200:
+                description: user deleted
+            404:
+                description: user does not exist
         """
         user = get_user_by_id(user_id)
 
@@ -265,15 +352,36 @@ class UserList(Resource):
 # user: login and logout actions
 class SingleUser(Resource):
     def get(self):
-        """Get the page with login form"""
+        """
+        Get the page with login form
+
+        ---
+        responses:
+            200:
+                description: page with the login form
+        """
         return
 
     def post(self):
-        """Credental check for user login
-
-        Arguments: username, password (all str)
-        Return access token if succeed
-        Return 400 if login fails
+        """
+        Credental check for user login
+        ---
+        parameters:
+            - in: body
+              name: username
+              description: username of the user
+              required: true
+              type: string
+            - in: body
+              name: password
+              description: password of the user
+              required: true
+              type: string
+        responses:
+            200:
+                description: Returns access token
+            400:
+                description: Login failed
         """
         parser.add_argument("username", required=True)
         parser.add_argument("password", required=True)
@@ -294,7 +402,12 @@ class SingleUser(Resource):
 
     @jwt_required()
     def delete(self):
-        # burada token revoke edilecek
+        """Logout
+        responses:
+            200:
+                description: logout success
+        """
+
         jti = get_jwt()["jti"]
         blockedToken = TokenBlockList(jti=jti)
         blockedToken.save()
