@@ -2,12 +2,15 @@
   <div class="nav">
     <h1>6 Blog</h1>
     <ul>
-      <li><a href="/">Home</a></li>
       <li>
-        <a href="/login">{{ userOption }}</a>
+        <router-link :to="{ name: 'Home' }">Home</router-link>
       </li>
-      <li>
-        <a href="/new-entry">{{ writingOption }}</a>
+      <li v-if="!signed">
+        <router-link :to="{ name: 'Login' }">Sign in</router-link>
+      </li>
+      <li v-if="signed" @click="signOut()" id="sign-out-btn">Sign out</li>
+      <li v-if="signed">
+        <router-link :to="{ name: 'NewEntry' }">Write</router-link>
       </li>
     </ul>
   </div>
@@ -20,19 +23,23 @@ export default {
   name: "Navbar",
   data() {
     return {
-      userOption: "",
+      signed: Boolean,
       writingOption: "",
     };
   },
 
   created() {
     if (access_token) {
-      this.userOption = "Sign out";
-      // sessionStorage.removeItem("token");
-      this.writingOption = "Write a post";
+      this.signed = true;
     } else {
-      this.userOption = "Sign in";
+      this.signed = false;
     }
+  },
+  methods: {
+    signOut() {
+      sessionStorage.removeItem("access_token");
+      location.reload();
+    },
   },
 };
 </script>
@@ -49,5 +56,8 @@ li {
 }
 a {
   text-decoration: none;
+}
+#sign-out-btn {
+  cursor: pointer;
 }
 </style>

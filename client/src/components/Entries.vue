@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="entries">
     <ul v-for="e in entries" :key="e.id">
       <li>
         <h3>
@@ -11,7 +11,6 @@
           >
             {{ e.title }}
           </router-link>
-          <!-- <a v-link="">{{ e.title }}</a> -->
         </h3>
         <p>{{ e.content }}</p>
       </li>
@@ -52,5 +51,9 @@ export default {
 <style>
 ul {
   list-style-type: none;
+}
+.entries {
+  width: 50%;
+  align-self: center;
 }
 </style>

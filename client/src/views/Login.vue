@@ -40,7 +40,6 @@ export default {
   methods: {
     postCredentials() {
       const path = "http://127.0.0.1:5000/login";
-      // let self = this;
       axios
         .post(path, {
           username: this.username,
@@ -49,8 +48,7 @@ export default {
         .then((response) => {
           /* burada anasayfaya git */
           sessionStorage.setItem("access_token", response.data.access_token);
-          console.log(response.data.access_token);
-          // window.location.href = "/";
+          location.reload();
           this.$router.push({ name: "Home" });
         })
         .catch(function (error) {

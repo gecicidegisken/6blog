@@ -23,8 +23,6 @@ export default {
   created() {
     let entryid = this.$route.params.entryid;
 
-    console.log(entryid);
-
     const path = "http://127.0.0.1:5000/entries/" + entryid;
     axios
       .get(path)
@@ -32,7 +30,6 @@ export default {
         this.e = res.data;
       })
       .catch((error) => {
-        // eslint-disable-next-line
         console.error(error);
       });
   },
