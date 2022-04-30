@@ -4,6 +4,7 @@ from flask import Flask, jsonify, request, session
 from flask_restful import Api, Resource, reqparse, inputs
 from mongoengine import *
 from flasgger import Swagger
+from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import (
     create_access_token,
@@ -12,6 +13,7 @@ from flask_jwt_extended import (
     current_user,
     get_jwt,
 )
+import json
 
 app = Flask(__name__, instance_relative_config=True)
 JWT_TTL = timedelta(hours=2)
@@ -23,6 +25,8 @@ db = connect(host=Connection.DB_URI)
 parser = reqparse.RequestParser()
 jwt = JWTManager(app)
 swagger = Swagger(app)
+CORS(app, supports_credentials=True)
+
 # database schemas
 class User(Document):
     username = StringField(required=True, unique=True)
@@ -34,7 +38,7 @@ class Entry(Document):
     title = StringField(required=True)
     content = StringField(required=True)
     author = ReferenceField(User, reverse_delete_rule=CASCADE)
-    date = DateTimeField(required=True)
+    date = DateTimeField()
 
 
 class Vote(Document):
@@ -125,7 +129,7 @@ class SingleEntry(Resource):
                 "title": entry.title,
                 "content": entry.content,
                 "author": entry.author.username,
-                "date": entry.date,
+                # "date": entry.date,
             }
         else:
             return {"err": "not found"}, 404
@@ -139,6 +143,11 @@ class SingleEntry(Resource):
               required: true
               description: the ID of the entry from db
               type: string
+            - in: body
+              name: votetype
+              required: true
+              description: vote (0 = downvote , 1 = upvote)
+              type: boolean
         responses:
             200:
                 description: Vote info
@@ -150,7 +159,7 @@ class SingleEntry(Resource):
         """
         current_user = get_user_by_username(session["username"])
         if current_user != None:
-            parser.add_argument("votetype", type=inputs.boolean, required=True)
+            parser.add_argument("votetype", type=inputs.boolean)
             args = parser.parse_args()
             votetype = args["votetype"]
             entry = get_entry_by_id(entry_id)
@@ -177,7 +186,8 @@ class EntryList(Resource):
                 description: all entries ordered by date in json format
         """
         entries = get_entries_orderby_date()
-        return entries.to_json()
+
+        return json.loads(entries.to_json())
 
     @jwt_required()
     def post(self):
@@ -203,8 +213,8 @@ class EntryList(Resource):
 
         """
         # print(current_user.username)
-        parser.add_argument("title", required=True)
-        parser.add_argument("content", required=True)
+        parser.add_argument("title")
+        parser.add_argument("content")
         args = parser.parse_args()
         title = args["title"]
         content = args["content"]
@@ -218,7 +228,7 @@ class EntryList(Resource):
                 "title": newEntry.title,
                 "content": newEntry.content,
                 "author": newEntry.author.username,
-                "date": newEntry.date,
+                # "date": newEntry.date,
             }
         else:
             return {"err": "login to post a new entry"}, 401
@@ -269,7 +279,6 @@ class UserList(Resource):
         if user != None:
             return {
                 "username": user.username,
-                "password": user.password,
                 "usertype": user.usertype,
             }
         else:
@@ -300,9 +309,9 @@ class UserList(Resource):
             400:
                 description: username is used
         """
-        parser.add_argument("username", required=True)
-        parser.add_argument("password", required=True)
-        parser.add_argument("usertype", type=inputs.boolean, required=True)
+        parser.add_argument("username")
+        parser.add_argument("password")
+        parser.add_argument("usertype", type=inputs.boolean)
         args = parser.parse_args()
         username = args["username"]
         password = args["password"]
@@ -314,15 +323,15 @@ class UserList(Resource):
 
         if user != None:
             return {"err": "username is used"}, 400
+
         newUser = User(
             username=username, password=hashed_password, usertype=usertype
         ).save()
 
         return {
             "username": newUser.username,
-            "password": newUser.password,
             "usertype": newUser.usertype,
-        }
+        }, 200
 
     def delete(self, user_id):
         """Delete a user by user_id
@@ -383,22 +392,21 @@ class SingleUser(Resource):
             400:
                 description: Login failed
         """
-        parser.add_argument("username", required=True)
-        parser.add_argument("password", required=True)
+
+        parser.add_argument("username")
+        parser.add_argument("password")
         args = parser.parse_args()
         username = args["username"]
         password = args["password"]
         user = get_user_by_username(username)
-        password_check = check_password_hash(user.password, password)
-        print(password_check)
 
-        if user != None and password_check:
-            access_token = create_access_token(identity=user)
-            print(get_id_by_user(user))
-            print(user.id)
-            return jsonify(access_token=access_token)
+        if user != None:
+            password_check = check_password_hash(user.password, password)
+            if password_check:
+                access_token = create_access_token(identity=user)
+                return jsonify(access_token=access_token)
 
-        return {"err": "login fail"}, 400
+        return {"err": "Username/password incorrect"}, 400
 
     @jwt_required()
     def delete(self):
@@ -414,9 +422,9 @@ class SingleUser(Resource):
         return {"msg": "logout success"}
 
 
-api.add_resource(EntryList, "/", "/entries")
+api.add_resource(EntryList, "/entries")
 api.add_resource(SingleEntry, "/entries/<string:entry_id>")
-api.add_resource(UserList, "/users/<string:user_id>", "/users/register", "/users")
+api.add_resource(UserList, "/users/<string:user_id>", "/register", "/users")
 api.add_resource(SingleUser, "/login")
 
 if __name__ == "__main__":
