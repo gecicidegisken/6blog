@@ -4,6 +4,8 @@
     <div class="entry">
       <h2 class="entry-title">{{ e.title }}</h2>
       <p class="entry-content">{{ e.content }}</p>
+      <p class="entry-author">Author: {{ e.author.username }}</p>
+      <p class="entry-date">Date: {{ convertDate(e.date) }}</p>
     </div>
   </div>
 </template>
@@ -32,6 +34,12 @@ export default {
       .catch((error) => {
         console.error(error);
       });
+  },
+  methods: {
+    convertDate(seconds) {
+      var date = new Date(seconds * 1000).toLocaleDateString("en-GB");
+      return date;
+    },
   },
 };
 </script>

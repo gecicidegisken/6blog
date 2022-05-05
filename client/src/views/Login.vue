@@ -48,6 +48,7 @@ export default {
         .then((response) => {
           /* burada anasayfaya git */
           sessionStorage.setItem("access_token", response.data.access_token);
+          console.log(response.data.access_token);
           location.reload();
           this.$router.push({ name: "Home" });
         })

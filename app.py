@@ -1,5 +1,7 @@
+import time
+import json
 from instance.config import Connection, JWTKey
-from datetime import date, timedelta
+from datetime import timedelta
 from flask import Flask, jsonify, request, session
 from flask_restful import Api, Resource, reqparse, inputs
 from mongoengine import *
@@ -13,7 +15,6 @@ from flask_jwt_extended import (
     current_user,
     get_jwt,
 )
-import json
 
 app = Flask(__name__, instance_relative_config=True)
 JWT_TTL = timedelta(hours=2)
@@ -25,7 +26,7 @@ db = connect(host=Connection.DB_URI)
 parser = reqparse.RequestParser()
 jwt = JWTManager(app)
 swagger = Swagger(app)
-CORS(app, supports_credentials=True)
+CORS(app, origins="http://localhost:8080")
 
 # database schemas
 class User(Document):
@@ -38,7 +39,7 @@ class Entry(Document):
     title = StringField(required=True)
     content = StringField(required=True)
     author = ReferenceField(User, reverse_delete_rule=CASCADE)
-    date = DateTimeField()
+    date = FloatField()
 
 
 class Vote(Document):
@@ -78,8 +79,9 @@ def get_entries_orderby_date():
     return entries
 
 
-def check_user_password():
-    """"""
+def check_user_password(user, password):
+    password_check = check_password_hash(user.password, password)
+    return password_check
 
 
 # JWT oluştururken identity=user yazdığımızda bu user objectinin id değerini doğru formatta getiren
@@ -124,12 +126,13 @@ class SingleEntry(Resource):
                 description: entry not found
         """
         entry = get_entry_by_id(entry_id)
+
         if entry != None:
             return {
                 "title": entry.title,
                 "content": entry.content,
-                "author": entry.author.username,
-                # "date": entry.date,
+                "author": json.loads(entry.author.to_json()),
+                "date": entry.date,
             }
         else:
             return {"err": "not found"}, 404
@@ -210,6 +213,8 @@ class EntryList(Resource):
                 description: info of the new entry
             401:
                 description: login to post a new entry
+            403:
+                description: current user's usertype is not allowed to write
 
         """
         # print(current_user.username)
@@ -218,18 +223,15 @@ class EntryList(Resource):
         args = parser.parse_args()
         title = args["title"]
         content = args["content"]
-
         if current_user != None:
             author = get_user_by_id(current_user.id)
-            newEntry = Entry(
-                title=title, content=content, author=author, date=date.today()
-            ).save()
-            return {
-                "title": newEntry.title,
-                "content": newEntry.content,
-                "author": newEntry.author.username,
-                # "date": newEntry.date,
-            }
+            if author.usertype == 0:
+                return {"err": "user must be a writer to write"}, 403
+            else:
+                newEntry = Entry(
+                    title=title, content=content, author=author, date=time.time()
+                ).save()
+            return {"msg": "successfully posted"}
         else:
             return {"err": "login to post a new entry"}, 401
 
@@ -401,7 +403,7 @@ class SingleUser(Resource):
         user = get_user_by_username(username)
 
         if user != None:
-            password_check = check_password_hash(user.password, password)
+            password_check = check_user_password(user, password)
             if password_check:
                 access_token = create_access_token(identity=user)
                 return jsonify(access_token=access_token)

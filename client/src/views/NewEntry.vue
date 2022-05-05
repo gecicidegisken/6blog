@@ -44,15 +44,19 @@ export default {
           title: this.title,
           content: this.content,
         })
-        .then(function (response) {
+        .then((response) => {
           if (response.status == 200) {
             /* burada yayınlandı mesajı verip anasayfaya git */
-
-            console.log(response.data);
+            console.log("yayinlandı");
+            this.$router.push({ name: "Home" });
           }
         })
         .catch(function (error) {
-          console.log(error.response);
+          if (error.response.status == 401) {
+            console.log("giriş yapılmalı");
+          } else if (error.response.status == 403) {
+            console.log("bu kullanıcı tipi yazı yazamaz");
+          }
           /* show error and refresh page */
         });
     },

@@ -8,10 +8,10 @@
       <li v-if="!signed">
         <router-link :to="{ name: 'Login' }">Sign in</router-link>
       </li>
-      <li v-if="signed" @click="signOut()" id="sign-out-btn">Sign out</li>
       <li v-if="signed">
         <router-link :to="{ name: 'NewEntry' }">Write</router-link>
       </li>
+      <li v-if="signed" @click="signOut()" id="sign-out-btn">Sign out</li>
     </ul>
   </div>
 </template>
@@ -37,6 +37,7 @@ export default {
   },
   methods: {
     signOut() {
+      // login endpointine delete requesti gönderilecek
       sessionStorage.removeItem("access_token");
       location.reload();
     },
@@ -44,6 +45,9 @@ export default {
 };
 </script>
 <style>
+a {
+  color: black;
+}
 ul {
   display: flex;
   justify-content: center;
