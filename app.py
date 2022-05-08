@@ -1,3 +1,4 @@
+from cgi import print_form
 import time
 import json
 from instance.config import Connection, JWTKey
@@ -17,7 +18,7 @@ from flask_jwt_extended import (
 )
 
 app = Flask(__name__, instance_relative_config=True)
-JWT_TTL = timedelta(hours=2)
+JWT_TTL = timedelta(minutes=1)
 app.config.from_object("config")
 app.config.from_pyfile("config.py")
 app.config["JWT_SECRET_KEY"] = JWTKey.JWT_KEY
@@ -126,17 +127,24 @@ class SingleEntry(Resource):
                 description: entry not found
         """
         entry = get_entry_by_id(entry_id)
-
+        votes = Vote.objects(entry=entry)
+        upvotes = votes.filter(upordown=True).count()
+        downvotes = votes.filter(upordown=False).count()
         if entry != None:
+
             return {
                 "title": entry.title,
                 "content": entry.content,
                 "author": json.loads(entry.author.to_json()),
                 "date": entry.date,
+                # "votes": json.loads(votes.to_json()),
+                "upvotes": upvotes,
+                "downvotes": downvotes,
             }
         else:
             return {"err": "not found"}, 404
 
+    @jwt_required()
     def put(self, entry_id):
         """Vote an entry by entry_id
         ---
@@ -160,7 +168,7 @@ class SingleEntry(Resource):
                 description: Current user already voted this content
 
         """
-        current_user = get_user_by_username(session["username"])
+
         if current_user != None:
             parser.add_argument("votetype", type=inputs.boolean)
             args = parser.parse_args()
@@ -174,7 +182,6 @@ class SingleEntry(Resource):
                 return vote.to_json()
             else:
                 return {"err": "user already voted this content"}, 403
-
         else:
             return {"err": "login to vote"}, 401
 
@@ -227,6 +234,7 @@ class EntryList(Resource):
             author = get_user_by_id(current_user.id)
             if author.usertype == 0:
                 return {"err": "user must be a writer to write"}, 403
+
             else:
                 newEntry = Entry(
                     title=title, content=content, author=author, date=time.time()
@@ -332,7 +340,6 @@ class UserList(Resource):
 
         return {
             "username": newUser.username,
-            "usertype": newUser.usertype,
         }, 200
 
     def delete(self, user_id):

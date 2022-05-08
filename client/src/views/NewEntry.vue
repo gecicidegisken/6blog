@@ -16,6 +16,7 @@
         </div>
       </form>
     </div>
+    <p v-if="loginErr" class="errMsg">{{ errMsg }}</p>
   </div>
 </template>
 
@@ -33,6 +34,8 @@ export default {
     return {
       title: "",
       content: "",
+      errMsg: "",
+      loginErr: false,
     };
   },
   methods: {
@@ -51,11 +54,16 @@ export default {
             this.$router.push({ name: "Home" });
           }
         })
-        .catch(function (error) {
-          if (error.response.status == 401) {
-            console.log("giriş yapılmalı");
-          } else if (error.response.status == 403) {
-            console.log("bu kullanıcı tipi yazı yazamaz");
+        .catch((error) => {
+          this.loginErr = true;
+          if (error.response) {
+            let errCode = error.response.status;
+            if (errCode == 401 || errCode == 405) {
+              this.errMsg =
+                "Oturum süresi dolmuş, yazı yazmak için giriş yapmalısınız.";
+            } else if (errCode == 403) {
+              console.log("bu kullanıcı tipi yazı yazamaz");
+            }
           }
           /* show error and refresh page */
         });
