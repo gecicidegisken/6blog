@@ -1,4 +1,3 @@
-from cgi import print_form
 import time
 import json
 from instance.config import Connection, JWTKey
@@ -175,13 +174,23 @@ class SingleEntry(Resource):
             votetype = args["votetype"]
             entry = get_entry_by_id(entry_id)
             vote = Vote(upordown=votetype, voting_user=current_user, entry=entry)
-
-            if not Vote.objects(voting_user=vote.voting_user, entry=vote.entry):
-                print("oy kullanildi")
+            existingVote = (
+                Vote.objects(voting_user=vote.voting_user, entry=vote.entry)
+                .limit(1)
+                .first()
+            )
+            if existingVote == None:
                 vote.save()
-                return vote.to_json()
-            else:
+                return {"msg": "entry voted"}
+            elif existingVote.upordown == votetype:
+                # user is trying to vote the same votetype
                 return {"err": "user already voted this content"}, 403
+            elif existingVote.upordown != votetype:
+                # user already voted but changed their mind
+                existingVote.delete()
+                vote.save()
+                return {"msg": "new vote posted"}
+
         else:
             return {"err": "login to vote"}, 401
 
