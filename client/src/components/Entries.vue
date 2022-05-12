@@ -19,8 +19,6 @@
 </template>
 
 <script>
-import axios from "axios";
-
 export default {
   name: "Entries",
   data() {
@@ -31,14 +29,13 @@ export default {
   methods: {
     getMessage() {
       const path = "http://127.0.0.1:5000/entries";
-      axios
+      this.$http
         .get(path)
         .then((res) => {
           this.entries = res.data;
           console.log(this.entries);
         })
         .catch((error) => {
-          // eslint-disable-next-line
           console.error(error);
         });
     },

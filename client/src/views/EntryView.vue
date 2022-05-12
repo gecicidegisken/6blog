@@ -11,19 +11,16 @@
       <p class="up">Upvotes: {{ e.upvotes }}</p>
       <p class="down">Downvotes: {{ e.downvotes }}</p>
 
-      <div v-if="isLogin" class="voteButtons">
+      <div class="voteButtons">
         <button @click="voteEntry(true)">Upvote</button>
         <button @click="voteEntry(false)">Downvote</button>
       </div>
-      <p v-if="voteErr">{{ errorMsg }}</p>
     </div>
   </div>
 </template>
 <script>
-import axios from "axios";
 import Navbar from "../components/Navbar.vue";
-let access_token = sessionStorage.getItem("access_token");
-axios.defaults.headers.common["Authorization"] = `Bearer ${access_token}`;
+
 export default {
   name: "EntryView",
   components: {
@@ -32,20 +29,12 @@ export default {
   data() {
     return {
       e: {},
-      voteErr: false,
-      errorMsg: "",
-      isLogin: false,
     };
   },
   created() {
-    if (access_token != null) {
-      this.isLogin = true;
-    } else {
-      this.isLogin = false;
-    }
     let entryid = this.$route.params.entryid;
     const path = "http://127.0.0.1:5000/entries/" + entryid;
-    axios
+    this.$http
       .get(path)
       .then((res) => {
         this.e = res.data;
@@ -63,21 +52,30 @@ export default {
     },
 
     voteEntry(vote) {
+      let access_token = this.$store.state.access_token;
       let entryid = this.$route.params.entryid;
       const path = "http://127.0.0.1:5000/entries/" + entryid;
-      axios
-        .put(path, { votetype: vote })
+      this.$http
+        .put(
+          path,
+          { votetype: vote },
+          {
+            headers: {
+              Authorization: "Bearer " + access_token,
+            },
+          }
+        )
         .then((response) => {
           console.log(response.data);
           location.reload();
         })
         .catch((error) => {
-          console.log(error.response.data);
+          let errCode = error.response.status;
           this.voteErr = true;
-          if (error.response.status == 403) {
-            this.errorMsg = "You already voted this content";
-          } else if (error.response.status == 401) {
-            this.errorMsg = "You must login to vote this content";
+          if (errCode == 403) {
+            this.$toasted.error("You've already voted this content");
+          } else if (errCode == 401 || errCode == 405) {
+            this.$toasted.error("You must login to vote this content");
           }
         });
     },

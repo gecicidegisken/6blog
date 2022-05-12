@@ -17,7 +17,7 @@ from flask_jwt_extended import (
 )
 
 app = Flask(__name__, instance_relative_config=True)
-JWT_TTL = timedelta(minutes=1)
+JWT_TTL = timedelta(hours=1)
 app.config.from_object("config")
 app.config.from_pyfile("config.py")
 app.config["JWT_SECRET_KEY"] = JWTKey.JWT_KEY
@@ -195,6 +195,38 @@ class SingleEntry(Resource):
             return {"err": "login to vote"}, 401
 
 
+class NewEntry(Resource):
+    @jwt_required()
+    def get(self):
+        """Get the page to post a new entry
+
+        ---
+        responses:
+            200:
+                description: user is authanticated to write
+            401:
+                description: user is not logged in
+            403:
+                description: user's usertype is not allowed to write
+            405:
+                description: session timed out
+            422:
+                description: acces token not found in browser
+
+        """
+        if current_user != None:
+            usertype = get_user_by_id(current_user.id).usertype
+            print(usertype)
+            if usertype:
+                return 200
+            else:
+                print(usertype)
+                return {"err": "user is not allowed to write"}, 403
+
+        else:
+            return {"err": "must login to write"}, 401
+
+
 # entry: list all, post new and delete actions
 class EntryList(Resource):
     def get(self):
@@ -342,14 +374,14 @@ class UserList(Resource):
 
         if user != None:
             return {"err": "username is used"}, 400
-
-        newUser = User(
-            username=username, password=hashed_password, usertype=usertype
-        ).save()
-
-        return {
-            "username": newUser.username,
-        }, 200
+        else:
+            newUser = User(
+                username=username, password=hashed_password, usertype=usertype
+            ).save()
+            return {
+                "msg": "successfully registered",
+                "username": newUser.username,
+            }, 200
 
     def delete(self, user_id):
         """Delete a user by user_id
@@ -406,7 +438,8 @@ class SingleUser(Resource):
               type: string
         responses:
             200:
-                description: Returns access token
+                description: Returns access token and 'false' if usertype is reader &
+                'true' if usertype is writer
             400:
                 description: Login failed
         """
@@ -417,13 +450,16 @@ class SingleUser(Resource):
         username = args["username"]
         password = args["password"]
         user = get_user_by_username(username)
+        usertype = user.usertype
 
         if user != None:
             password_check = check_user_password(user, password)
             if password_check:
                 access_token = create_access_token(identity=user)
-                return jsonify(access_token=access_token)
-
+                return {
+                    "access_token": access_token,
+                    "usertype": usertype,
+                }
         return {"err": "Username/password incorrect"}, 400
 
     @jwt_required()
@@ -433,17 +469,20 @@ class SingleUser(Resource):
             200:
                 description: logout success
         """
-
-        jti = get_jwt()["jti"]
-        blockedToken = TokenBlockList(jti=jti)
-        blockedToken.save()
-        return {"msg": "logout success"}
+        if current_user != None:
+            jti = get_jwt()["jti"]
+            blockedToken = TokenBlockList(jti=jti)
+            blockedToken.save()
+            return {"msg": "logout success"}
+        else:
+            return {"err": "already logged out"}, 400
 
 
 api.add_resource(EntryList, "/entries")
 api.add_resource(SingleEntry, "/entries/<string:entry_id>")
 api.add_resource(UserList, "/users/<string:user_id>", "/register", "/users")
 api.add_resource(SingleUser, "/login")
+api.add_resource(NewEntry, "/newentry")
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,6 +1,7 @@
 <template>
   <div class="new-entry">
     <navbar />
+    <h3 class="title">Write a post</h3>
     <div class="entry-form">
       <form>
         <div class="form-input">
@@ -16,15 +17,13 @@
         </div>
       </form>
     </div>
-    <p v-if="loginErr" class="errMsg">{{ errMsg }}</p>
+    <p v-if="$store.state.loggedin" class="errMsg">{{ errMsg }}</p>
   </div>
 </template>
 
 <script>
-import axios from "axios";
 import Navbar from "../components/Navbar.vue";
-let access_token = sessionStorage.getItem("access_token");
-axios.defaults.headers.common["Authorization"] = `Bearer ${access_token}`;
+
 export default {
   name: "NewEntry",
   components: {
@@ -35,18 +34,25 @@ export default {
       title: "",
       content: "",
       errMsg: "",
-      loginErr: false,
     };
   },
   methods: {
     postEntry() {
+      let access_token = this.$store.state.access_token;
       const path = "http://127.0.0.1:5000/entries";
-
-      axios
-        .post(path, {
-          title: this.title,
-          content: this.content,
-        })
+      this.$http
+        .post(
+          path,
+          {
+            title: this.title,
+            content: this.content,
+          },
+          {
+            headers: {
+              Authorization: "Bearer " + access_token,
+            },
+          }
+        )
         .then((response) => {
           if (response.status == 200) {
             /* burada yayınlandı mesajı verip anasayfaya git */
@@ -55,7 +61,6 @@ export default {
           }
         })
         .catch((error) => {
-          this.loginErr = true;
           if (error.response) {
             let errCode = error.response.status;
             if (errCode == 401 || errCode == 405) {

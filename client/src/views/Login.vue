@@ -1,6 +1,7 @@
 <template>
   <div class="login">
     <navbar />
+    <h3 class="title">Login</h3>
     <div class="login-form">
       <form>
         <div class="form-input">
@@ -23,9 +24,8 @@
 </template>
 
 <script>
-import axios from "axios";
-// import router from "vue-router";
 import Navbar from "../components/Navbar.vue";
+// import store from "vuex";
 export default {
   name: "Login",
   components: {
@@ -40,19 +40,19 @@ export default {
   methods: {
     postCredentials() {
       const path = "http://127.0.0.1:5000/login";
-      axios
+      this.$http
         .post(path, {
           username: this.username,
           password: this.password,
         })
         .then((response) => {
-          /* burada anasayfaya git */
-          sessionStorage.setItem("access_token", response.data.access_token);
           console.log(response.data.access_token);
-          location.reload();
+          localStorage.setItem("access_token", response.data.access_token);
+          this.$store.commit("login", response.data.access_token);
+          this.$toasted.success("Successfully logged in");
           this.$router.push({ name: "Home" });
         })
-        .catch(function (error) {
+        .catch((error) => {
           console.log(error.response.data);
           /* show error and refresh page */
         });

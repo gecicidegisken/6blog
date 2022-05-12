@@ -1,6 +1,7 @@
 <template>
   <div class="register">
     <navbar />
+    <h3 class="title">Register</h3>
     <div class="register-form">
       <div class="form-input">
         <label for="username">Username </label>
@@ -41,7 +42,7 @@
 
 <script>
 import Navbar from "../components/Navbar.vue";
-import axios from "axios";
+
 export default {
   name: "Register",
   components: {
@@ -57,17 +58,20 @@ export default {
   methods: {
     postCredentials() {
       const path = "http://127.0.0.1:5000/register";
-      axios
+      this.$http
         .post(path, {
           username: this.username,
           password: this.password,
           usertype: this.usertype,
         })
-        .then(function (response) {
+        .then((response) => {
           console.log(response.data, "200");
-          //   buradan anasayfaya git
+          this.$router.push({ name: "Login" });
         })
-        .catch(function (error) {
+        .catch((error) => {
+          if (error.response.status == 400) {
+            console.log("kullanıcı adı uygun değil");
+          }
           console.log(error);
         });
     },
