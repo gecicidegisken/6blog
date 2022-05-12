@@ -1,3 +1,4 @@
+from email.policy import strict
 import time
 import json
 from instance.config import Connection, JWTKey
@@ -171,6 +172,7 @@ class SingleEntry(Resource):
         if current_user != None:
             parser.add_argument("votetype", type=inputs.boolean)
             args = parser.parse_args()
+            print("burdayiz")
             votetype = args["votetype"]
             entry = get_entry_by_id(entry_id)
             vote = Vote(upordown=votetype, voting_user=current_user, entry=entry)
@@ -359,6 +361,8 @@ class UserList(Resource):
                 description: new user's info
             400:
                 description: username is used
+            405:
+                description: info cannot be blank
         """
         parser.add_argument("username")
         parser.add_argument("password")
@@ -372,9 +376,12 @@ class UserList(Resource):
         )
         user = get_user_by_username(username)
 
-        if user != None:
-            return {"err": "username is used"}, 400
+        if username == None or password == None or usertype == None:
+            return {"err": "user info cannot be blank"}, 405
         else:
+            if user != None:
+                return {"err": "username is used"}, 400
+
             newUser = User(
                 username=username, password=hashed_password, usertype=usertype
             ).save()
@@ -450,7 +457,6 @@ class SingleUser(Resource):
         username = args["username"]
         password = args["password"]
         user = get_user_by_username(username)
-        usertype = user.usertype
 
         if user != None:
             password_check = check_user_password(user, password)
@@ -458,7 +464,6 @@ class SingleUser(Resource):
                 access_token = create_access_token(identity=user)
                 return {
                     "access_token": access_token,
-                    "usertype": usertype,
                 }
         return {"err": "Username/password incorrect"}, 400
 

@@ -65,13 +65,20 @@ export default {
           usertype: this.usertype,
         })
         .then((response) => {
-          console.log(response.data, "200");
+          console.log(response);
+          this.$toasted.success("Successfully created an account!");
           this.$router.push({ name: "Login" });
         })
         .catch((error) => {
-          if (error.response.status == 400) {
-            console.log("kullanıcı adı uygun değil");
+          if (error.response) {
+            let errCode = error.response.status;
+            if (errCode == 400) {
+              this.$toasted.error("Username is not available");
+            } else if (errCode == 405) {
+              this.$toasted.error("Please fill out every blank in the form");
+            }
           }
+
           console.log(error);
         });
     },

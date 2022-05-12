@@ -71,7 +71,7 @@ export default {
         })
         .catch((error) => {
           let errCode = error.response.status;
-          this.voteErr = true;
+
           if (errCode == 403) {
             this.$toasted.error("You've already voted this content");
           } else if (errCode == 401 || errCode == 405) {

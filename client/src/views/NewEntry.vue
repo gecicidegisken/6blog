@@ -55,8 +55,7 @@ export default {
         )
         .then((response) => {
           if (response.status == 200) {
-            /* burada yayınlandı mesajı verip anasayfaya git */
-            console.log("yayinlandı");
+            this.$toasted.success("Successfully posted");
             this.$router.push({ name: "Home" });
           }
         })

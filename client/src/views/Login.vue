@@ -53,7 +53,12 @@ export default {
           this.$router.push({ name: "Home" });
         })
         .catch((error) => {
-          console.log(error.response.data);
+          if (error.response) {
+            console.log(error.response.data);
+            if (error.response.status == 400) {
+              this.$toasted.error("Username/password incorrect.");
+            }
+          }
           /* show error and refresh page */
         });
     },
