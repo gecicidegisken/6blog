@@ -46,8 +46,8 @@ export default {
           password: this.password,
         })
         .then((response) => {
-          console.log(response.data.access_token);
-          localStorage.setItem("access_token", response.data.access_token);
+          console.log(response.data.status);
+          // localStorage.setItem("access_token", response.data.access_token);
           this.$store.commit("login", response.data.access_token);
           this.$toasted.success("Successfully logged in");
           this.$router.push({ name: "Home" });

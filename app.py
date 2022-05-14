@@ -1,4 +1,4 @@
-from email.policy import strict
+from email import header
 import time
 import json
 from instance.config import Connection, JWTKey
@@ -7,7 +7,7 @@ from flask import Flask, jsonify, request, session
 from flask_restful import Api, Resource, reqparse, inputs
 from mongoengine import *
 from flasgger import Swagger
-from flask_cors import CORS
+from flask_cors import *
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import (
     create_access_token,
@@ -17,8 +17,11 @@ from flask_jwt_extended import (
     get_jwt,
 )
 
+
 app = Flask(__name__, instance_relative_config=True)
-JWT_TTL = timedelta(hours=1)
+CORS(app,origins=["http://localhost:8080","http://127.0.0.1:8080/"])
+
+JWT_TTL = timedelta(minutes=1)
 app.config.from_object("config")
 app.config.from_pyfile("config.py")
 app.config["JWT_SECRET_KEY"] = JWTKey.JWT_KEY
@@ -27,7 +30,6 @@ db = connect(host=Connection.DB_URI)
 parser = reqparse.RequestParser()
 jwt = JWTManager(app)
 swagger = Swagger(app)
-CORS(app, origins="http://localhost:8080")
 
 # database schemas
 class User(Document):
@@ -131,13 +133,11 @@ class SingleEntry(Resource):
         upvotes = votes.filter(upordown=True).count()
         downvotes = votes.filter(upordown=False).count()
         if entry != None:
-
             return {
                 "title": entry.title,
                 "content": entry.content,
                 "author": json.loads(entry.author.to_json()),
                 "date": entry.date,
-                # "votes": json.loads(votes.to_json()),
                 "upvotes": upvotes,
                 "downvotes": downvotes,
             }
@@ -161,7 +161,9 @@ class SingleEntry(Resource):
               type: boolean
         responses:
             200:
-                description: Vote info
+                description: Successfully voted
+            210:
+                description: Vote successfully changed
             401:
                 description: Login to vote
             403:
@@ -172,7 +174,6 @@ class SingleEntry(Resource):
         if current_user != None:
             parser.add_argument("votetype", type=inputs.boolean)
             args = parser.parse_args()
-            print("burdayiz")
             votetype = args["votetype"]
             entry = get_entry_by_id(entry_id)
             vote = Vote(upordown=votetype, voting_user=current_user, entry=entry)
@@ -183,7 +184,7 @@ class SingleEntry(Resource):
             )
             if existingVote == None:
                 vote.save()
-                return {"msg": "entry voted"}
+                return {"msg": "entry voted"},200
             elif existingVote.upordown == votetype:
                 # user is trying to vote the same votetype
                 return {"err": "user already voted this content"}, 403
@@ -191,7 +192,7 @@ class SingleEntry(Resource):
                 # user already voted but changed their mind
                 existingVote.delete()
                 vote.save()
-                return {"msg": "new vote posted"}
+                return {"msg": "new vote posted"},210
 
         else:
             return {"err": "login to vote"}, 401
@@ -207,7 +208,7 @@ class NewEntry(Resource):
             200:
                 description: user is authanticated to write
             401:
-                description: user is not logged in
+                description: session timed out
             403:
                 description: user's usertype is not allowed to write
             405:
@@ -218,15 +219,11 @@ class NewEntry(Resource):
         """
         if current_user != None:
             usertype = get_user_by_id(current_user.id).usertype
-            print(usertype)
+           
             if usertype:
                 return 200
             else:
-                print(usertype)
                 return {"err": "user is not allowed to write"}, 403
-
-        else:
-            return {"err": "must login to write"}, 401
 
 
 # entry: list all, post new and delete actions
@@ -267,7 +264,7 @@ class EntryList(Resource):
                 description: current user's usertype is not allowed to write
 
         """
-        # print(current_user.username)
+       
         parser.add_argument("title")
         parser.add_argument("content")
         args = parser.parse_args()
@@ -465,7 +462,8 @@ class SingleUser(Resource):
                 return {
                     "access_token": access_token,
                 }
-        return {"err": "Username/password incorrect"}, 400
+        else:
+            return {"err": "Username/password incorrect"}, 400
 
     @jwt_required()
     def delete(self):
@@ -473,6 +471,8 @@ class SingleUser(Resource):
         responses:
             200:
                 description: logout success
+            401:
+                description: token expired before logging out
         """
         if current_user != None:
             jti = get_jwt()["jti"]
@@ -482,6 +482,9 @@ class SingleUser(Resource):
         else:
             return {"err": "already logged out"}, 400
 
+
+from webargs import fields
+from webargs.flaskparser import use_args
 
 api.add_resource(EntryList, "/entries")
 api.add_resource(SingleEntry, "/entries/<string:entry_id>")

@@ -2,14 +2,16 @@
   <div class="entry-view">
     <navbar />
     <div class="entry">
-      <h2 class="entry-title">{{ e.title }}</h2>
-      <p class="entry-content">{{ e.content }}</p>
-      <p class="entry-author" v-if="e.author">
-        Author: {{ e.author.username }}
+      <h2 class="entry-title">{{ entry.title }}</h2>
+      <p class="entry-content">{{ entry.content }}</p>
+      <p class="entry-author" v-if="entry.author">
+        Author: {{ entry.author.username }}
       </p>
-      <p class="entry-date" v-if="e.date">Date: {{ convertDate(e.date) }}</p>
-      <p class="up">Upvotes: {{ e.upvotes }}</p>
-      <p class="down">Downvotes: {{ e.downvotes }}</p>
+      <p class="entry-date" v-if="entry.date">
+        Date: {{ convertDate(entry.date) }}
+      </p>
+      <p class="up">Upvotes: {{ $store.state.upvotes }}</p>
+      <p class="down">Downvotes: {{ $store.state.downvotes }}</p>
 
       <div class="voteButtons">
         <button @click="voteEntry(true)">Upvote</button>
@@ -28,7 +30,7 @@ export default {
   },
   data() {
     return {
-      e: {},
+      entry: {},
     };
   },
   created() {
@@ -36,13 +38,23 @@ export default {
     const path = "http://127.0.0.1:5000/entries/" + entryid;
     this.$http
       .get(path)
-      .then((res) => {
-        this.e = res.data;
-        console.log(res.data.upvotes);
-        console.log(res.data.downvotes);
+      .then((response) => {
+        this.entry = response.data;
+        let votes = {
+          up: response.data.upvotes,
+          down: response.data.downvotes,
+        };
+
+        this.$store.commit("getVotes", votes);
       })
       .catch((error) => {
-        console.error(error);
+        if (error.response) {
+          if (error.response.status == 404) {
+            this.$toasted.error("Entry is not found. It may be deleted.");
+          } else {
+            this.$toasted.error("Something went wrong");
+          }
+        }
       });
   },
   methods: {
@@ -66,16 +78,27 @@ export default {
           }
         )
         .then((response) => {
-          console.log(response.data);
-          location.reload();
+          let resCode = response.status;
+          if (resCode == 200) {
+            this.$toasted.success("Successfully voted");
+            this.$store.commit("setVotes", vote);
+          } else if (resCode == 210) {
+            this.$toasted.success("Successfully updated vote");
+            this.$store.commit("updateVotes", vote);
+          }
         })
         .catch((error) => {
-          let errCode = error.response.status;
+          if (error.response) {
+            let errCode = error.response.status;
+            console.log(error.toJSON());
 
-          if (errCode == 403) {
-            this.$toasted.error("You've already voted this content");
-          } else if (errCode == 401 || errCode == 405) {
-            this.$toasted.error("You must login to vote this content");
+            if (errCode == 403) {
+              this.$toasted.error("You've already voted this content");
+            } else if (errCode == 401) {
+              this.$toasted.error("Session timed out. Please login again");
+            } else if (errCode == 422 || errCode == 405) {
+              this.$toasted.error("You must login to vote this content");
+            }
           }
         });
     },

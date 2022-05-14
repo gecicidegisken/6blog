@@ -41,6 +41,11 @@ export default {
         })
         .catch((error) => {
           if (error.response) {
+            if (error.response.status == 401) {
+              this.$store.commit("logout");
+              this.$toasted.success("Successfully logged out");
+              this.$router.push({ name: "Home" });
+            }
             console.log(error.response);
           }
         });
@@ -63,13 +68,13 @@ export default {
         .catch((error) => {
           if (error.response) {
             let errCode = error.response.status;
-            if (errCode == 401 || errCode == 422) {
+            if (errCode == 422) {
               this.$toasted.error("You must login to write");
               console.log(error.response.data);
             } else if (errCode == 403) {
               this.$toasted.error("Your usertype is not allowed to write");
-            } else if (errCode == 405) {
-              console.log("Session timed out. Login again");
+            } else if (errCode == 405 || errCode == 401) {
+              this.$toasted.error("Session timed out. Please login again");
             }
           }
           /* show error and refresh page */
