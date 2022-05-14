@@ -2,6 +2,7 @@
   <div class="entry-view">
     <navbar />
     <div class="entry">
+      <h2 v-if="!entry.title">LOADING</h2>
       <h2 class="entry-title">{{ entry.title }}</h2>
       <p class="entry-content">{{ entry.content }}</p>
       <p class="entry-author" v-if="entry.author">
@@ -10,10 +11,11 @@
       <p class="entry-date" v-if="entry.date">
         Date: {{ convertDate(entry.date) }}
       </p>
-      <p class="up">Upvotes: {{ $store.state.upvotes }}</p>
-      <p class="down">Downvotes: {{ $store.state.downvotes }}</p>
-
-      <div class="voteButtons">
+      <div v-if="entry.date" class="vote">
+        <p class="up">Upvotes: {{ $store.state.upvotes }}</p>
+        <p class="down">Downvotes: {{ $store.state.downvotes }}</p>
+      </div>
+      <div v-if="entry.date && $store.state.loggedin" class="voteButtons">
         <button @click="voteEntry(true)">Upvote</button>
         <button @click="voteEntry(false)">Downvote</button>
       </div>
