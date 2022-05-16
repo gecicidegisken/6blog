@@ -2,22 +2,40 @@
   <div class="entry-view">
     <navbar />
     <div class="entry">
-      <h2 v-if="!entry.title">LOADING</h2>
+      <h2 class="loading" v-if="!entry.title"></h2>
+
       <h2 class="entry-title">{{ entry.title }}</h2>
+      <div class="entry-metadata">
+        <p class="entry-date" v-if="entry.date">
+          {{ convertDate(entry.date) }}&nbsp; • &nbsp;
+        </p>
+        <p class="entry-author" v-if="entry.author">
+          by <span class="author-username">{{ entry.author.username }}</span>
+        </p>
+      </div>
       <p class="entry-content">{{ entry.content }}</p>
-      <p class="entry-author" v-if="entry.author">
-        Author: {{ entry.author.username }}
-      </p>
-      <p class="entry-date" v-if="entry.date">
-        Date: {{ convertDate(entry.date) }}
-      </p>
-      <div v-if="entry.date" class="vote">
+      <hr class="hr" />
+
+      <!-- <div v-if="entry.date" class="vote">
         <p class="up">Upvotes: {{ $store.state.upvotes }}</p>
         <p class="down">Downvotes: {{ $store.state.downvotes }}</p>
-      </div>
-      <div v-if="entry.date && $store.state.loggedin" class="voteButtons">
-        <button @click="voteEntry(true)">Upvote</button>
-        <button @click="voteEntry(false)">Downvote</button>
+      </div> -->
+
+      <div v-if="entry.date" class="voteButtons">
+        <button
+          :disabled="!$store.state.loggedin"
+          class="voteBtn"
+          @click="voteEntry(true)"
+        >
+          {{ $store.state.upvotes }} ↑
+        </button>
+        <button
+          :disabled="!$store.state.loggedin"
+          class="voteBtn"
+          @click="voteEntry(false)"
+        >
+          {{ $store.state.downvotes }}↓
+        </button>
       </div>
     </div>
   </div>
@@ -107,3 +125,69 @@ export default {
   },
 };
 </script>
+<style>
+button:disabled {
+  color: gray;
+  border: 1px solid gray;
+  cursor: not-allowed;
+}
+hr.hr {
+  border: 1px solid var(--yellow);
+  width: 100%;
+}
+.loading {
+  margin: 0 auto;
+  border: 10px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 10px solid var(--pink);
+  width: 50px;
+  height: 50px;
+  -webkit-animation: spin 2s linear infinite; /* Safari */
+  animation: spin 2s linear infinite;
+}
+.entry-view .entry {
+  width: 50%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+.entry-view .entry .entry-title {
+  color: var(--blue);
+  margin-bottom: 0px;
+}
+.entry-view .entry-metadata {
+  display: flex;
+  font-size: 13px;
+  margin-top: 0px;
+}
+.entry-metadata .author-username {
+  color: var(--pink);
+}
+.voteButtons {
+  margin: 0 auto;
+}
+.voteBtn {
+  border-radius: 50%;
+  background-color: transparent;
+  border: 1px solid var(--green);
+  padding: 10px;
+  cursor: pointer;
+  margin: 15px;
+  font-weight: 500;
+}
+
+@media only screen and (max-width: 600px) {
+  .entry-view .entry {
+    width: 90%;
+    margin: 0 auto;
+  }
+}
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+</style>

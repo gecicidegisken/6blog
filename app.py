@@ -78,9 +78,12 @@ def get_entry_by_id(entryid):
 
 
 def get_entries_orderby_date():
-    entries = Entry.objects().order_by("date")
+    entries = Entry.objects().order_by("-date")
     return entries
 
+# def get_entry_by_mostupvoted():
+#     upvotes=Vote.objects(entry__in=Entry.objects()).filter(upordown=True);
+#     return upvotes
 
 def check_user_password(user, password):
     password_check = check_password_hash(user.password, password)
@@ -128,6 +131,10 @@ class SingleEntry(Resource):
             404:
                 description: entry not found
         """
+      
+        # entry = get_entry_by_mostupvoted()
+        # print (entry.to_json())
+        
         entry = get_entry_by_id(entry_id)
         votes = Vote.objects(entry=entry)
         upvotes = votes.filter(upordown=True).count()
@@ -140,9 +147,9 @@ class SingleEntry(Resource):
                 "date": entry.date,
                 "upvotes": upvotes,
                 "downvotes": downvotes,
-            }
-        else:
-            return {"err": "not found"}, 404
+                }
+       
+        return {"err": "not found"}, 404
 
     @jwt_required()
     def put(self, entry_id):
@@ -229,12 +236,14 @@ class NewEntry(Resource):
 # entry: list all, post new and delete actions
 class EntryList(Resource):
     def get(self):
-        """Get all entries ordered by date
+        """Get all entries ordered by date 
         ---
+    
         responses:
             200:
                 description: all entries ordered by date in json format
         """
+     
         entries = get_entries_orderby_date()
 
         return json.loads(entries.to_json())
@@ -483,8 +492,6 @@ class SingleUser(Resource):
             return {"err": "already logged out"}, 400
 
 
-from webargs import fields
-from webargs.flaskparser import use_args
 
 api.add_resource(EntryList, "/entries")
 api.add_resource(SingleEntry, "/entries/<string:entry_id>")

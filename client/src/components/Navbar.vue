@@ -1,19 +1,25 @@
 <template>
-  <div class="nav">
-    <h1>6 Blog</h1>
-    <ul>
-      <li>
-        <router-link :to="{ name: 'Home' }">Home</router-link>
-      </li>
-      <li class="writeBtn" @click="newEntry()">Write</li>
-      <li v-if="!$store.state.loggedin">
-        <router-link :to="{ name: 'Login' }">Sign in</router-link>
-      </li>
-      <li v-if="$store.state.loggedin" @click="signOut()" id="sign-out-btn">
-        Sign out
-      </li>
-    </ul>
-  </div>
+  <nav class="nav">
+    <div class="nav-title">
+      <h1 class="blog-title">
+        <router-link :to="{ name: 'Home' }">6 Blog</router-link>
+      </h1>
+    </div>
+    <div class="nav-buttons">
+      <ul>
+        <li>
+          <router-link :to="{ name: 'Home' }">Home</router-link>
+        </li>
+        <li class="writeBtn" @click="newEntry()">Write</li>
+        <li v-if="!$store.state.loggedin">
+          <router-link :to="{ name: 'Login' }">Sign in</router-link>
+        </li>
+        <li v-if="$store.state.loggedin" @click="signOut()" id="sign-out-btn">
+          Sign out
+        </li>
+      </ul>
+    </div>
+  </nav>
 </template>
 <script>
 export default {
@@ -84,26 +90,47 @@ export default {
 };
 </script>
 <style>
-a {
-  color: black;
-}
-ul {
+nav {
   display: flex;
-  justify-content: center;
+  width: 55%;
+  justify-content: space-between;
+  align-content: center;
+  margin: 0 auto;
+  margin-top: 5rem;
+  margin-bottom: 2rem;
+  border-bottom: 4px solid var(--yellow);
+}
+.nav-title,
+.nav-buttons {
+  margin: 0;
+  padding: 0;
+}
+.nav-buttons ul,
+.nav-buttons li > a {
+  display: flex;
   list-style-type: none;
-  border-bottom: 2px solid;
-  padding-left: 0;
+  color: var(--pink);
+  margin: 0;
 }
-li {
+.nav-buttons li {
   margin: 15px;
+  margin-top: 0;
 }
-a {
-  text-decoration: none;
+
+.blog-title {
+  margin: 0;
 }
-#sign-out-btn {
-  cursor: pointer;
+.blog-title a {
+  color: var(--green);
 }
+#sign-out-btn,
 .writeBtn {
   cursor: pointer;
+}
+@media only screen and (max-width: 600px) {
+  nav {
+    margin-top: 1rem;
+    width: 90%;
+  }
 }
 </style>

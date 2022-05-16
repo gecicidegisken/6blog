@@ -25,6 +25,12 @@ export default {
 .home {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  /* justify-content: center; */
+}
+p {
+  color: black;
+}
+a {
+  color: black;
 }
 </style>
