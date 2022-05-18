@@ -16,24 +16,11 @@
       <p class="entry-content">{{ entry.content }}</p>
       <hr class="hr" />
 
-      <!-- <div v-if="entry.date" class="vote">
-        <p class="up">Upvotes: {{ $store.state.upvotes }}</p>
-        <p class="down">Downvotes: {{ $store.state.downvotes }}</p>
-      </div> -->
-
       <div v-if="entry.date" class="voteButtons">
-        <button
-          :disabled="!$store.state.loggedin"
-          class="voteBtn"
-          @click="voteEntry(true)"
-        >
+        <button class="voteBtn" @click="voteEntry(true)">
           {{ $store.state.upvotes }} ↑
         </button>
-        <button
-          :disabled="!$store.state.loggedin"
-          class="voteBtn"
-          @click="voteEntry(false)"
-        >
+        <button class="voteBtn" @click="voteEntry(false)">
           {{ $store.state.downvotes }}↓
         </button>
       </div>
