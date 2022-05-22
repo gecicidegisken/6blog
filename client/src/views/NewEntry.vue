@@ -28,7 +28,6 @@
         </div>
       </form>
     </div>
-    <p v-if="$store.state.loggedin" class="errMsg">{{ errMsg }}</p>
   </div>
 </template>
 
@@ -51,6 +50,12 @@ export default {
     postEntry() {
       let access_token = this.$store.state.access_token;
       const path = "http://127.0.0.1:5000/entries";
+      if (access_token) {
+        this.$http.interceptors.request.use(function (config) {
+          config.headers.Authorization = `Bearer ${access_token}`;
+          return config;
+        });
+      }
       this.$http
         .post(
           path,
@@ -58,11 +63,7 @@ export default {
             title: this.title,
             content: this.content,
           },
-          {
-            headers: {
-              Authorization: "Bearer " + access_token,
-            },
-          }
+          {}
         )
         .then((response) => {
           if (response.status == 200) {
@@ -73,14 +74,12 @@ export default {
         .catch((error) => {
           if (error.response) {
             let errCode = error.response.status;
-            if (errCode == 401 || errCode == 405) {
-              this.errMsg =
-                "Oturum süresi dolmuş, yazı yazmak için giriş yapmalısınız.";
+            if (errCode == 401) {
+              this.$toasted.error("Session timed out. Login again to post");
             } else if (errCode == 403) {
-              console.log("bu kullanıcı tipi yazı yazamaz");
+              console.log("This usertype can't write");
             }
           }
-          /* show error and refresh page */
         });
     },
     titleEnter(event) {

@@ -1,6 +1,8 @@
-from email import header
+
 import time
 import json
+from typing import Optional
+
 from instance.config import Connection, JWTKey
 from datetime import timedelta
 from flask import Flask, jsonify, request, session
@@ -22,9 +24,11 @@ app = Flask(__name__, instance_relative_config=True)
 CORS(app,origins=["http://localhost:8080","http://127.0.0.1:8080/"])
 
 JWT_TTL = timedelta(minutes=1)
+
 app.config.from_object("config")
 app.config.from_pyfile("config.py")
 app.config["JWT_SECRET_KEY"] = JWTKey.JWT_KEY
+
 api = Api(app)
 db = connect(host=Connection.DB_URI)
 parser = reqparse.RequestParser()
@@ -130,10 +134,7 @@ class SingleEntry(Resource):
                 description: the entry data
             404:
                 description: entry not found
-        """
-      
-        # entry = get_entry_by_mostupvoted()
-        # print (entry.to_json())
+        """     
         
         entry = get_entry_by_id(entry_id)
         votes = Vote.objects(entry=entry)
@@ -152,7 +153,7 @@ class SingleEntry(Resource):
         return {"err": "not found"}, 404
 
     @jwt_required()
-    def put(self, entry_id):
+    def post(self, entry_id):
         """Vote an entry by entry_id
         ---
         parameters:
@@ -172,13 +173,13 @@ class SingleEntry(Resource):
             210:
                 description: Vote successfully changed
             401:
-                description: Login to vote
+                description: User must be logged in to vote
             403:
                 description: Current user already voted this content
 
         """
-
-        if current_user != None:
+   
+        if current_user:
             parser.add_argument("votetype", type=inputs.boolean)
             args = parser.parse_args()
             votetype = args["votetype"]
@@ -215,22 +216,20 @@ class NewEntry(Resource):
             200:
                 description: user is authanticated to write
             401:
-                description: session timed out
+                description: user is not logged in
             403:
                 description: user's usertype is not allowed to write
-            405:
-                description: session timed out
-            422:
-                description: acces token not found in browser
 
         """
-        if current_user != None:
+        if current_user:
             usertype = get_user_by_id(current_user.id).usertype
            
             if usertype:
                 return 200
             else:
                 return {"err": "user is not allowed to write"}, 403
+        else:
+                return {"err": "you must login to write"}, 401
 
 
 # entry: list all, post new and delete actions
@@ -279,7 +278,8 @@ class EntryList(Resource):
         args = parser.parse_args()
         title = args["title"]
         content = args["content"]
-        if current_user != None:
+        
+        if current_user:
             author = get_user_by_id(current_user.id)
             if author.usertype == 0:
                 return {"err": "user must be a writer to write"}, 403
@@ -474,12 +474,14 @@ class SingleUser(Resource):
         else:
             return {"err": "Username/password incorrect"}, 400
 
-    @jwt_required()
+    @jwt_required(optional=True)
     def delete(self):
         """Logout
         responses:
             200:
                 description: logout success
+            400:
+                description: already logged out
             401:
                 description: token expired before logging out
         """

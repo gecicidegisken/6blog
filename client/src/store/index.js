@@ -7,7 +7,7 @@ Vue.use(Vuex);
 const store = new Vuex.Store({
   state: {
     loggedin: 0,
-    access_token: "invalid token",
+    access_token: "",
     downvotes: 0,
     upvotes: 0,
   },
@@ -18,7 +18,7 @@ const store = new Vuex.Store({
     },
     logout(state) {
       state.loggedin = 0;
-      state.access_token = "invalid token";
+      state.access_token = "";
     },
     getVotes(state, vote) {
       state.upvotes = vote.up;

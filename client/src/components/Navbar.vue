@@ -33,12 +33,14 @@ export default {
     signOut() {
       let access_token = this.$store.state.access_token;
       const path = "http://127.0.0.1:5000/login";
+      if (access_token) {
+        this.$http.interceptors.request.use(function (config) {
+          config.headers.Authorization = `Bearer ${access_token}`;
+          return config;
+        });
+      }
       this.$http
-        .delete(path, {
-          headers: {
-            Authorization: "Bearer " + access_token,
-          },
-        })
+        .delete(path, {})
         .then((response) => {
           console.log(response);
           this.$store.commit("logout");
@@ -47,9 +49,9 @@ export default {
         })
         .catch((error) => {
           if (error.response) {
-            if (error.response.status == 401) {
+            if (error.response.status == 401 || error.response.status == 400) {
               this.$store.commit("logout");
-              this.$toasted.success("Successfully logged out");
+              this.$toasted.show("Logged out");
               this.$router.push({ name: "Home" });
             }
             console.log(error.response);
@@ -58,14 +60,19 @@ export default {
     },
     newEntry() {
       let access_token = this.$store.state.access_token;
+
       const path = "http://127.0.0.1:5000/newentry";
 
+      this.$http.interceptors.request.use(function (config) {
+        if (access_token) {
+          config.headers.Authorization = `Bearer ${access_token}`;
+          console.log(config.headers.Authorization + "AAAA");
+        }
+        return config;
+      });
+
       this.$http
-        .get(path, {
-          headers: {
-            Authorization: "Bearer " + access_token,
-          },
-        })
+        .get(path, {})
         .then((response) => {
           if (response.status == 200) {
             this.$router.push({ name: "NewEntry" });
@@ -74,13 +81,16 @@ export default {
         .catch((error) => {
           if (error.response) {
             let errCode = error.response.status;
+            let isLoggedin = this.$store.state.loggedin;
             if (errCode == 422) {
               this.$toasted.error("You must login to write");
               console.log(error.response.data);
             } else if (errCode == 403) {
               this.$toasted.error("Your usertype is not allowed to write");
-            } else if (errCode == 405 || errCode == 401) {
+            } else if (errCode == 401 && isLoggedin) {
               this.$toasted.error("Session timed out. Please login again");
+            } else if (errCode == 401 && !isLoggedin) {
+              this.$toasted.error("You must login to write");
             }
           }
           /* show error and refresh page */

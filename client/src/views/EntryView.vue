@@ -74,16 +74,16 @@ export default {
       let access_token = this.$store.state.access_token;
       let entryid = this.$route.params.entryid;
       const path = "http://127.0.0.1:5000/entries/" + entryid;
+
+      this.$http.interceptors.request.use(function (config) {
+        if (access_token) {
+          config.headers.Authorization = `Bearer ${access_token}`;
+        }
+        return config;
+      });
+
       this.$http
-        .put(
-          path,
-          { votetype: vote },
-          {
-            headers: {
-              Authorization: "Bearer " + access_token,
-            },
-          }
-        )
+        .post(path, { votetype: vote })
         .then((response) => {
           let resCode = response.status;
           if (resCode == 200) {
@@ -98,13 +98,14 @@ export default {
           if (error.response) {
             let errCode = error.response.status;
             console.log(error.toJSON());
+            let isLoggedin = this.$store.state.loggedin;
 
             if (errCode == 403) {
               this.$toasted.error("You've already voted this content");
-            } else if (errCode == 401) {
+            } else if (errCode == 401 && isLoggedin) {
               this.$toasted.error("Session timed out. Please login again");
-            } else if (errCode == 422 || errCode == 405) {
-              this.$toasted.error("You must login to vote this content");
+            } else if (errCode == 401 && !isLoggedin) {
+              this.$toasted.error("You must login to write");
             }
           }
         });

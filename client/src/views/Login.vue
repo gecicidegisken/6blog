@@ -53,8 +53,6 @@ export default {
           password: this.password,
         })
         .then((response) => {
-          console.log(response.data.status);
-          // localStorage.setItem("access_token", response.data.access_token);
           this.$store.commit("login", response.data.access_token);
           this.$toasted.success("Successfully logged in");
           this.$router.push({ name: "Home" });
@@ -66,7 +64,6 @@ export default {
               this.$toasted.error("Username/password incorrect.");
             }
           }
-          /* show error and refresh page */
         });
     },
   },
