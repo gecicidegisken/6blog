@@ -71,19 +71,12 @@ export default {
     },
 
     voteEntry(vote) {
-      let access_token = this.$store.state.access_token;
       let entryid = this.$route.params.entryid;
       const path = "http://127.0.0.1:5000/entries/" + entryid;
-
-      this.$http.interceptors.request.use(function (config) {
-        if (access_token) {
-          config.headers.Authorization = `Bearer ${access_token}`;
-        }
-        return config;
-      });
+      let voteData = { votetype: vote };
 
       this.$http
-        .post(path, { votetype: vote })
+        .post(path, voteData)
         .then((response) => {
           let resCode = response.status;
           if (resCode == 200) {

@@ -3,7 +3,7 @@ import App from "./App.vue";
 import router from "./router";
 import store from "./store";
 import Toasted from "vue-toasted";
-import axios from "axios";
+import { mainaxios } from "./axios";
 
 Vue.config.productionTip = false;
 Vue.use(Toasted, {
@@ -13,7 +13,7 @@ Vue.use(Toasted, {
   iconPack: "fontawesome",
 });
 
-Vue.prototype.$http = axios;
+Vue.prototype.$http = mainaxios;
 
 new Vue({
   router,

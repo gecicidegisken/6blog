@@ -32,7 +32,7 @@
 
 <script>
 import Navbar from "../components/Navbar.vue";
-// import store from "vuex";
+
 export default {
   name: "Login",
   components: {

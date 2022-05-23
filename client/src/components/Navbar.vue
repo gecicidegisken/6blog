@@ -31,14 +31,7 @@ export default {
   created() {},
   methods: {
     signOut() {
-      let access_token = this.$store.state.access_token;
       const path = "http://127.0.0.1:5000/login";
-      if (access_token) {
-        this.$http.interceptors.request.use(function (config) {
-          config.headers.Authorization = `Bearer ${access_token}`;
-          return config;
-        });
-      }
       this.$http
         .delete(path, {})
         .then((response) => {
@@ -59,17 +52,7 @@ export default {
         });
     },
     newEntry() {
-      let access_token = this.$store.state.access_token;
-
       const path = "http://127.0.0.1:5000/newentry";
-
-      this.$http.interceptors.request.use(function (config) {
-        if (access_token) {
-          config.headers.Authorization = `Bearer ${access_token}`;
-          console.log(config.headers.Authorization + "AAAA");
-        }
-        return config;
-      });
 
       this.$http
         .get(path, {})

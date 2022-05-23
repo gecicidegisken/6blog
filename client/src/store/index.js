@@ -11,6 +11,11 @@ const store = new Vuex.Store({
     downvotes: 0,
     upvotes: 0,
   },
+  getters: {
+    getAccessToken(state) {
+      return state.access_token;
+    },
+  },
   mutations: {
     login(state, access_token) {
       state.loggedin = 1;

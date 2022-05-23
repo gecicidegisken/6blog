@@ -48,14 +48,8 @@ export default {
   },
   methods: {
     postEntry() {
-      let access_token = this.$store.state.access_token;
       const path = "http://127.0.0.1:5000/entries";
-      if (access_token) {
-        this.$http.interceptors.request.use(function (config) {
-          config.headers.Authorization = `Bearer ${access_token}`;
-          return config;
-        });
-      }
+
       this.$http
         .post(
           path,

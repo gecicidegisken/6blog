@@ -1,7 +1,7 @@
 <template>
   <div class="register">
     <navbar />
-    <h3 class="title">Register</h3>
+    <h3 class="register-title">Register</h3>
     <div class="register-form">
       <div class="form-input">
         <label for="username">Username </label>
@@ -30,13 +30,15 @@
         />
         <label for="reader">Reader</label>
       </div>
-      <div class="form-input">
+      <div class="form-input registerBtn">
         <input @click="postCredentials()" type="button" value="Sign up" />
       </div>
     </div>
     <br />
-    <p>Do you already have an account?</p>
-    <a href="/login">Sign in!</a>
+    <div class="login">
+      <p>Already have an account?</p>
+      <a class="loginBtn" href="/login">Sign in!</a>
+    </div>
   </div>
 </template>
 
@@ -85,3 +87,47 @@ export default {
   },
 };
 </script>
+<style>
+.register {
+  display: flex;
+  flex-direction: column;
+}
+.form-input {
+  margin: 15px;
+  background-color: white;
+}
+.form-input input {
+  background-color: white !important;
+  border-radius: 5px;
+}
+
+.register-title {
+  color: var(--green) !important;
+  margin: 0 auto;
+}
+.register-form {
+  display: flex;
+  flex-direction: column;
+  margin: 0 auto;
+}
+.registerBtn {
+  text-decoration: underline var(--yellow);
+  border: none;
+  /* border-bottom: 3px solid var(--yellow); */
+  background-color: transparent;
+  text-align: center;
+  font-weight: 600;
+  color: var(--pink);
+  cursor: pointer;
+  font-size: 1.3rem;
+  margin: 0 auto;
+  align-items: center !important;
+}
+.login {
+  margin: 0 auto;
+}
+.loginBtn {
+  color: var(--pink);
+  font-weight: 600;
+}
+</style>
