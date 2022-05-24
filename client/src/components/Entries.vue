@@ -44,10 +44,11 @@ export default {
         .get(path)
         .then((res) => {
           this.entries = res.data;
-          console.log(this.entries);
         })
         .catch((error) => {
-          console.error(error);
+          if (error) {
+            console.error(error);
+          }
         });
     },
     trimContent(content) {

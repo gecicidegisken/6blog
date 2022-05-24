@@ -76,7 +76,9 @@ export default {
       let voteData = { votetype: vote };
 
       this.$http
-        .post(path, voteData)
+        .post(path, null, {
+          params: voteData,
+        })
         .then((response) => {
           let resCode = response.status;
           if (resCode == 200) {

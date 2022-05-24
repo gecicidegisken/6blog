@@ -30,8 +30,13 @@
         />
         <label for="reader">Reader</label>
       </div>
-      <div class="form-input registerBtn">
-        <input @click="postCredentials()" type="button" value="Sign up" />
+      <div class="form-input">
+        <input
+          class="registerBtninş"
+          @click="postCredentials()"
+          type="button"
+          value="Sign up"
+        />
       </div>
     </div>
     <br />

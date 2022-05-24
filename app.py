@@ -2,6 +2,7 @@
 import time
 import json
 from typing import Optional
+from xmlrpc.client import Boolean
 
 from instance.config import Connection, JWTKey
 from datetime import timedelta
@@ -35,6 +36,7 @@ parser = reqparse.RequestParser()
 jwt = JWTManager(app)
 swagger = Swagger(app)
 
+
 # database schemas
 class User(Document):
     username = StringField(required=True, unique=True)
@@ -57,6 +59,10 @@ class Vote(Document):
 
 class TokenBlockList(Document):
     jti = StringField(required=True)
+
+# Vote.objects.delete()
+# Entry.objects.delete()
+# TokenBlockList.objects.delete()
 
 
 # helper functions
@@ -180,7 +186,8 @@ class SingleEntry(Resource):
         """
    
         if current_user:
-            parser.add_argument("votetype", type=inputs.boolean)
+            parser.add_argument("votetype", location='args',  help="argda hata",type=inputs.boolean)
+            print("burda")
             args = parser.parse_args()
             votetype = args["votetype"]
             entry = get_entry_by_id(entry_id)
