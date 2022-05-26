@@ -18,7 +18,7 @@ from flask_jwt_extended import (
 
 
 app = Flask(__name__, instance_relative_config=True)
-CORS(app,origins=["http://localhost:8080","http://127.0.0.1:8080/"])
+CORS(app, origins=["http://localhost:8080", "http://127.0.0.1:8080/"])
 
 
 app.config.from_object("config")
@@ -34,7 +34,7 @@ jwt = JWTManager(app)
 swagger = Swagger(app)
 
 
-#region database schemas
+# region database schemas
 class User(Document):
     username = StringField(required=True, unique=True)
     password = StringField(required=True)
@@ -57,12 +57,13 @@ class Vote(Document):
 class TokenBlockList(Document):
     jti = StringField(required=True)
 
+
 # Vote.objects.delete()
 # Entry.objects.delete()
 # TokenBlockList.objects.delete()
-#endregion
+# endregion
 
-#region helper functions
+# region helper functions
 def get_user_by_id(userid):
     try:
         user = User.objects(id=userid).limit(1).first()
@@ -104,9 +105,11 @@ def get_entries_orderby_date():
 def check_user_password(user, password):
     password_check = check_password_hash(user.password, password)
     return password_check
-#endregion
 
-#region JWT callbacks
+
+# endregion
+
+# region JWT callbacks
 # JWT oluştururken identity=user yazdığımızda bu user objectinin id değerini doğru formatta getiren
 # callback fonksiyonu
 @jwt.user_identity_loader
@@ -126,16 +129,15 @@ def check_if_token_revoked(jwt_header, jwt_payload):
     jti = jwt_payload["jti"]
     token = TokenBlockList.objects(jti=jti).limit(1).first()
     return token != None
-#endregion
+
+
+# endregion
+
 
 # entry: get & vote actions
 class SingleEntry(Resource):
-
     def get(self, entry_id):
         """Get an entry by entry_id
-
-        Return entry information (title,content,author username,date,upvotes,downvotes) based on ID,
-        Return 404 not found if entry does not exist
         ---
         parameters:
             - in: path
@@ -148,8 +150,7 @@ class SingleEntry(Resource):
                 description: the entry data {title,content,author,data,upvotes,downvotes}
             404:
                 description: entry not found
-        """     
-        
+        """
         entry = get_entry_by_id(entry_id)
         votes = Vote.objects(entry=entry)
         upvotes = votes.filter(upordown=True).count()
@@ -162,8 +163,8 @@ class SingleEntry(Resource):
                 "date": entry.date,
                 "upvotes": upvotes,
                 "downvotes": downvotes,
-                }
-       
+            }
+
         return {"err": "not found"}, 404
 
     @jwt_required()
@@ -192,9 +193,11 @@ class SingleEntry(Resource):
                 description: Current user already voted this content
 
         """
-   
+
         if current_user:
-            parser.add_argument("votetype", location='args',  help="argda hata",type=inputs.boolean)
+            parser.add_argument(
+                "votetype", location="args", help="argda hata", type=inputs.boolean
+            )
             print("burda")
             args = parser.parse_args()
             votetype = args["votetype"]
@@ -207,7 +210,7 @@ class SingleEntry(Resource):
             )
             if existingVote == None:
                 vote.save()
-                return {"msg": "entry voted"},200
+                return {"msg": "entry voted"}, 200
             elif existingVote.upordown == votetype:
                 # user is trying to vote the same votetype
                 return {"err": "user already voted this content"}, 403
@@ -215,12 +218,13 @@ class SingleEntry(Resource):
                 # user already voted but changed their mind
                 existingVote.delete()
                 vote.save()
-                return {"msg": "new vote posted"},210
+                return {"msg": "new vote posted"}, 210
 
         else:
             return {"err": "login to vote"}, 401
 
-#entry: get the page with new entry form
+
+# entry: get the page with new entry form
 class NewEntry(Resource):
     @jwt_required()
     def get(self):
@@ -238,26 +242,26 @@ class NewEntry(Resource):
         """
         if current_user:
             usertype = get_user_by_id(current_user.id).usertype
-           
+
             if usertype:
                 return 200
             else:
                 return {"err": "user is not allowed to write"}, 403
         else:
-                return {"err": "you must login to write"}, 401
+            return {"err": "you must login to write"}, 401
 
 
 # entry: list all, post new and delete actions
 class EntryList(Resource):
     def get(self):
-        """Get all entries ordered by date 
+        """Get all entries ordered by date
         ---
-    
+
         responses:
             200:
                 description: all entries ordered by date in json format
         """
-     
+
         entries = get_entries_orderby_date()
 
         return json.loads(entries.to_json())
@@ -287,13 +291,13 @@ class EntryList(Resource):
                 description: current user's usertype is not allowed to write
 
         """
-       
+
         parser.add_argument("title")
         parser.add_argument("content")
         args = parser.parse_args()
         title = args["title"]
         content = args["content"]
-        
+
         if current_user:
             author = get_user_by_id(current_user.id)
             if author.usertype == 0:
@@ -507,7 +511,6 @@ class SingleUser(Resource):
             return {"msg": "logout success"}
         else:
             return {"err": "already logged out"}, 400
-
 
 
 api.add_resource(EntryList, "/entries")

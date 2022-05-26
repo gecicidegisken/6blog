@@ -5,6 +5,7 @@ import Login from "../views/Login.vue";
 import Register from "../views/Register.vue";
 import NewEntry from "../views/NewEntry.vue";
 import EntryView from "../views/EntryView.vue";
+import PageNotFound from "../views/PageNotFound.vue";
 
 Vue.use(VueRouter);
 
@@ -34,6 +35,7 @@ const routes = [
     name: "EntryView",
     component: EntryView,
   },
+  { path: "*", component: PageNotFound },
 ];
 
 const router = new VueRouter({

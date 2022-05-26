@@ -7,6 +7,7 @@ import { mainaxios } from "./axios";
 
 Vue.config.productionTip = false;
 Vue.use(Toasted, {
+  name: "ToastNotification",
   duration: 1500,
   position: "bottom-center",
   theme: "bubble",
@@ -18,5 +19,8 @@ Vue.prototype.$http = mainaxios;
 new Vue({
   router,
   store,
+  components: {
+    Toasted,
+  },
   render: (h) => h(App),
 }).$mount("#app");
