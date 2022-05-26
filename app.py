@@ -1,16 +1,12 @@
-
 import time
 import json
-from typing import Optional
-from xmlrpc.client import Boolean
-
 from instance.config import Connection, JWTKey
 from datetime import timedelta
+from flask_cors import *
 from flask import Flask, jsonify, request, session
 from flask_restful import Api, Resource, reqparse, inputs
 from mongoengine import *
 from flasgger import Swagger
-from flask_cors import *
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import (
     create_access_token,
@@ -24,11 +20,12 @@ from flask_jwt_extended import (
 app = Flask(__name__, instance_relative_config=True)
 CORS(app,origins=["http://localhost:8080","http://127.0.0.1:8080/"])
 
-JWT_TTL = timedelta(minutes=1)
 
 app.config.from_object("config")
 app.config.from_pyfile("config.py")
 app.config["JWT_SECRET_KEY"] = JWTKey.JWT_KEY
+
+JWT_TTL = timedelta(minutes=1)
 
 api = Api(app)
 db = connect(host=Connection.DB_URI)
@@ -37,7 +34,7 @@ jwt = JWTManager(app)
 swagger = Swagger(app)
 
 
-# database schemas
+#region database schemas
 class User(Document):
     username = StringField(required=True, unique=True)
     password = StringField(required=True)
@@ -63,43 +60,53 @@ class TokenBlockList(Document):
 # Vote.objects.delete()
 # Entry.objects.delete()
 # TokenBlockList.objects.delete()
+#endregion
 
-
-# helper functions
+#region helper functions
 def get_user_by_id(userid):
-    user = User.objects(id=userid).limit(1).first()
+    try:
+        user = User.objects(id=userid).limit(1).first()
+    except:
+        return
     if user != None:
         return user
     return
 
 
 def get_user_by_username(username):
-    user = User.objects(username=username).limit(1).first()
+    try:
+        user = User.objects(username=username).limit(1).first()
+    except:
+        return
     if user != None:
         return user
     return
 
 
 def get_entry_by_id(entryid):
-    entry = Entry.objects(id=entryid).limit(1).first()
+    try:
+        entry = Entry.objects(id=entryid).limit(1).first()
+    except:
+        return
     if entry != None:
         return entry
     return
 
 
 def get_entries_orderby_date():
-    entries = Entry.objects().order_by("-date")
+    try:
+        entries = Entry.objects().order_by("-date")
+    except:
+        return
     return entries
 
-# def get_entry_by_mostupvoted():
-#     upvotes=Vote.objects(entry__in=Entry.objects()).filter(upordown=True);
-#     return upvotes
 
 def check_user_password(user, password):
     password_check = check_password_hash(user.password, password)
     return password_check
+#endregion
 
-
+#region JWT callbacks
 # JWT oluştururken identity=user yazdığımızda bu user objectinin id değerini doğru formatta getiren
 # callback fonksiyonu
 @jwt.user_identity_loader
@@ -119,14 +126,15 @@ def check_if_token_revoked(jwt_header, jwt_payload):
     jti = jwt_payload["jti"]
     token = TokenBlockList.objects(jti=jti).limit(1).first()
     return token != None
+#endregion
 
-
-# entry: get, vote actions
+# entry: get & vote actions
 class SingleEntry(Resource):
+
     def get(self, entry_id):
         """Get an entry by entry_id
 
-        Return entry information (title,content,author username,date) based on ID,
+        Return entry information (title,content,author username,date,upvotes,downvotes) based on ID,
         Return 404 not found if entry does not exist
         ---
         parameters:
@@ -137,7 +145,7 @@ class SingleEntry(Resource):
               type: string
         responses:
             200:
-                description: the entry data
+                description: the entry data {title,content,author,data,upvotes,downvotes}
             404:
                 description: entry not found
         """     
@@ -212,7 +220,7 @@ class SingleEntry(Resource):
         else:
             return {"err": "login to vote"}, 401
 
-
+#entry: get the page with new entry form
 class NewEntry(Resource):
     @jwt_required()
     def get(self):
@@ -510,7 +518,3 @@ api.add_resource(NewEntry, "/newentry")
 
 if __name__ == "__main__":
     app.run(debug=True)
-
-
-# sudo systemctl start mongod
-# pipenv run python3 app.py

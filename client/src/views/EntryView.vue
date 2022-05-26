@@ -58,6 +58,9 @@ export default {
         if (error.response) {
           if (error.response.status == 404) {
             this.$toasted.error("Entry is not found. It may be deleted.");
+            setTimeout(() => {
+              this.$router.push({ name: "Home" });
+            }, 2000);
           } else {
             this.$toasted.error("Something went wrong");
           }
