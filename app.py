@@ -18,7 +18,14 @@ from flask_jwt_extended import (
 
 
 app = Flask(__name__, instance_relative_config=True)
-CORS(app, origins=["http://localhost:8080", "http://127.0.0.1:8080/"])
+CORS(
+    app,
+    origins=[
+        "http://localhost:8080",
+        "http://127.0.0.1:8080/",
+        "http://localhost:3000",
+    ],
+)
 
 
 app.config.from_object("config")
